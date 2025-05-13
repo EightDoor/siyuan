@@ -2,9 +2,8 @@ name: Release Docker Image
 
 on:
   push:
-    branches:
-      - master
-  workflow_dispatch:
+    tags:
+      - '*-z*'
 
 jobs:
   build:
