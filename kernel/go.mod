@@ -32,16 +32,16 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/gabriel-vasile/mimetype v1.4.9
 	github.com/gin-contrib/gzip v1.2.3
-	github.com/gin-contrib/sessions v1.0.3
+	github.com/gin-contrib/sessions v1.0.4
 	github.com/gin-contrib/sse v1.1.0
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/go-ole/go-ole v1.3.0
 	github.com/goccy/go-json v0.10.5
 	github.com/gofrs/flock v0.12.1
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/gorilla/css v1.0.1
 	github.com/gorilla/websocket v1.5.3
-	github.com/imroc/req/v3 v3.52.0
+	github.com/imroc/req/v3 v3.52.2
 	github.com/jinzhu/copier v0.4.0
 	github.com/json-iterator/go v1.1.12
 	github.com/klippa-app/go-pdfium v1.14.1
@@ -58,11 +58,11 @@ require (
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/sashabaranov/go-openai v1.39.1
 	github.com/shirou/gopsutil/v4 v4.25.4
-	github.com/siyuan-note/dejavu v0.0.0-20250517093813-790c9f168b0f
+	github.com/siyuan-note/dejavu v0.0.0-20250526130245-f729f46c75eb
 	github.com/siyuan-note/encryption v0.0.0-20250326023622-24a67e6956ec
 	github.com/siyuan-note/eventbus v0.0.0-20240627125516-396fdb0f0f97
 	github.com/siyuan-note/filelock v0.0.0-20250227145141-7d111cdf3c57
-	github.com/siyuan-note/httpclient v0.0.0-20250517093611-df7ae2ccf5bc
+	github.com/siyuan-note/httpclient v0.0.0-20250526130146-7be189f1b77b
 	github.com/siyuan-note/logging v0.0.0-20250425042449-b96c40249b54
 	github.com/siyuan-note/riff v0.0.0-20250424035337-0a1e91809f6d
 	github.com/spf13/cast v1.8.0
@@ -71,7 +71,7 @@ require (
 	github.com/vanng822/css v1.0.1
 	github.com/vmihailenco/msgpack/v5 v5.4.1
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1
-	github.com/xuri/excelize/v2 v2.9.0
+	github.com/xuri/excelize/v2 v2.9.1
 	golang.org/x/image v0.27.0
 	golang.org/x/mobile v0.0.0-20250305212854-3a7bc9f8a4de
 	golang.org/x/mod v0.24.0
@@ -104,10 +104,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/v4a v1.3.34 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.12.3 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.7.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.7.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.12.15 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.18.15 // indirect
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.79.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.25.3 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.30.1 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.19 // indirect
@@ -120,7 +120,7 @@ require (
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/ebitengine/purego v0.8.3 // indirect
+	github.com/ebitengine/purego v0.8.4 // indirect
 	github.com/fatih/set v0.2.1 // indirect
 	github.com/gammazero/toposort v0.1.1 // indirect
 	github.com/gigawattio/window v0.0.0-20180317192513-0f5467e35573 // indirect
@@ -156,7 +156,6 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
-	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/onsi/ginkgo/v2 v2.23.4 // indirect
 	github.com/otiai10/gosseract/v2 v2.4.1 // indirect
@@ -166,7 +165,7 @@ require (
 	github.com/qiniu/go-sdk/v7 v7.25.3 // indirect
 	github.com/quasoft/memstore v0.0.0-20191010062613-2bce066d2b0b // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
-	github.com/quic-go/quic-go v0.51.0 // indirect
+	github.com/quic-go/quic-go v0.52.0 // indirect
 	github.com/refraction-networking/utls v1.7.3 // indirect
 	github.com/restic/chunker v0.4.0 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
@@ -176,6 +175,7 @@ require (
 	github.com/ssor/bom v0.0.0-20170718123548-6386211fdfcf // indirect
 	github.com/teambition/rrule-go v1.8.2 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
+	github.com/tiendc/go-deepcopy v1.6.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.15 // indirect
 	github.com/tklauser/numcpus v0.10.0 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
