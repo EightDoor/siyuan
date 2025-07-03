@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"runtime/debug"
 	"slices"
 	"strings"
 	"sync"
@@ -99,6 +98,8 @@ func flushTx(tx *Transaction) {
 			return
 		case TxErrCodeDataIsSyncing:
 			util.PushMsg(Conf.Language(222), 5000)
+		case TxErrWriteAttributeView:
+			util.PushMsg(Conf.language(258), 5000)
 		default:
 			txData, _ := gulu.JSON.MarshalJSON(tx)
 			logging.LogFatalf(logging.ExitCodeFatal, "transaction failed [%d]: %s\n  tx [%s]", txErr.code, txErr.msg, txData)
@@ -155,8 +156,7 @@ func performTx(tx *Transaction) (ret *TxErr) {
 
 	defer func() {
 		if e := recover(); nil != e {
-			stack := debug.Stack()
-			msg := fmt.Sprintf("PANIC RECOVERED: %v\n\t%s\n", e, stack)
+			msg := fmt.Sprintf("PANIC RECOVERED: %v\n\t%s\n", e, logging.ShortStack())
 			logging.LogErrorf(msg)
 
 			if 1 == tx.state.Load() {
@@ -278,6 +278,26 @@ func performTx(tx *Transaction) (ret *TxErr) {
 			ret = tx.doUnbindAttrViewBlock(op)
 		case "duplicateAttrViewKey":
 			ret = tx.doDuplicateAttrViewKey(op)
+		case "setAttrViewCoverFrom":
+			ret = tx.doSetAttrViewCoverFrom(op)
+		case "setAttrViewCoverFromAssetKeyID":
+			ret = tx.doSetAttrViewCoverFromAssetKeyID(op)
+		case "setAttrViewCardSize":
+			ret = tx.doSetAttrViewCardSize(op)
+		case "setAttrViewFitImage":
+			ret = tx.doSetAttrViewFitImage(op)
+		case "setAttrViewShowIcon":
+			ret = tx.doSetAttrViewShowIcon(op)
+		case "setAttrViewWrapField":
+			ret = tx.doSetAttrViewWrapField(op)
+		case "changeAttrViewLayout":
+			ret = tx.doChangeAttrViewLayout(op)
+		case "setAttrViewBlockView":
+			ret = tx.doSetAttrViewBlockView(op)
+		case "setAttrViewCardAspectRatio":
+			ret = tx.doSetAttrViewCardAspectRatio(op)
+		case "doSetAttrViewGroup":
+			ret = tx.doSetAttrViewGroup(op)
 		}
 
 		if nil != ret {
@@ -1482,6 +1502,7 @@ type Operation struct {
 	IsTwoWay            bool                     `json:"isTwoWay"`          // 属性视图关联列是否是双向关系
 	BackRelationKeyID   string                   `json:"backRelationKeyID"` // 属性视图关联列回链关联列的 ID
 	RemoveDest          bool                     `json:"removeDest"`        // 属性视图删除关联目标
+	Layout              av.LayoutType            `json:"layout"`            // 属性视图布局类型
 }
 
 type Transaction struct {

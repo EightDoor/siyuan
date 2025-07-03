@@ -24,16 +24,13 @@ import (
 	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
-type Filterable interface {
-	FilterRows(attrView *AttributeView)
-}
-
+// ViewFilter 描述了视图过滤器的结构。
 type ViewFilter struct {
-	Column        string         `json:"column"`
-	Operator      FilterOperator `json:"operator"`
-	Value         *Value         `json:"value"`
-	RelativeDate  *RelativeDate  `json:"relativeDate"`
-	RelativeDate2 *RelativeDate  `json:"relativeDate2"`
+	Column        string         `json:"column"`        // 列（字段）ID
+	Operator      FilterOperator `json:"operator"`      // 过滤操作符
+	Value         *Value         `json:"value"`         // 过滤值
+	RelativeDate  *RelativeDate  `json:"relativeDate"`  // 相对时间
+	RelativeDate2 *RelativeDate  `json:"relativeDate2"` // 第二个相对时间，用于某些操作符，比如 FilterOperatorIsBetween
 }
 
 type RelativeDateUnit int

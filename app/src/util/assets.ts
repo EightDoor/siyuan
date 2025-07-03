@@ -169,49 +169,6 @@ export const initAssets = () => {
     });
 };
 
-export const addGA = () => {
-    if (!window.siyuan.config.system.disableGoogleAnalytics) {
-        addScript("https://www.googletagmanager.com/gtag/js?id=G-L7WEXVQCR9", "gaScript");
-        window.dataLayer = window.dataLayer || [];
-        /*eslint-disable */
-        const gtag = function (...args: any[]) {
-            window.dataLayer.push(arguments);
-        };
-        /*eslint-enable */
-        gtag("js", new Date());
-        gtag("config", "G-L7WEXVQCR9", {send_page_view: false});
-        const para = {
-            version: Constants.SIYUAN_VERSION,
-            container: window.siyuan.config.system.container,
-            os: window.siyuan.config.system.os,
-            osPlatform: window.siyuan.config.system.osPlatform,
-            isLoggedIn: false,
-            subscriptionStatus: -1,
-            subscriptionPlan: -1,
-            subscriptionType: -1,
-            oneTimePayStatus: -1,
-            syncEnabled: false,
-            syncProvider: -1,
-            cTreeCount: window.siyuan.config.stat.cTreeCount,
-            cBlockCount: window.siyuan.config.stat.cBlockCount,
-            cDataSize: window.siyuan.config.stat.cDataSize,
-            cAssetsSize: window.siyuan.config.stat.cAssetsSize,
-        };
-        if (window.siyuan.user) {
-            para.isLoggedIn = true;
-            para.subscriptionStatus = window.siyuan.user.userSiYuanSubscriptionStatus;
-            para.subscriptionPlan = window.siyuan.user.userSiYuanSubscriptionPlan;
-            para.subscriptionType = window.siyuan.user.userSiYuanSubscriptionType;
-            para.oneTimePayStatus = window.siyuan.user.userSiYuanOneTimePayStatus;
-        }
-        if (window.siyuan.config.sync) {
-            para.syncEnabled = window.siyuan.config.sync.enabled;
-            para.syncProvider = window.siyuan.config.sync.provider;
-        }
-        gtag("event", Constants.ANALYTICS_EVT_ON_GET_CONFIG, para);
-    }
-};
-
 export const setInlineStyle = async (set = true) => {
     const height = Math.floor(window.siyuan.config.editor.fontSize * 1.625);
     let style;
@@ -315,18 +272,15 @@ export const setInlineStyle = async (set = true) => {
 .protyle-wysiwyg [data-node-id].li::before {
     right: 17px;
     left: auto;
+}
+.b3-typography table:not([style*="text-align: left"]) {
+  margin-left: auto;
 }`;
     }
     style += `\n:root{--b3-font-size-editor:${window.siyuan.config.editor.fontSize}px}
 .b3-typography code:not(.hljs), .protyle-wysiwyg span[data-type~=code] { font-variant-ligatures: ${window.siyuan.config.editor.codeLigatures ? "normal" : "none"} }
-.li > .protyle-action {height:${height + 8}px;line-height: ${height + 8}px}
-/* 列表项后的内容和列表项对齐 https://github.com/siyuan-note/siyuan/issues/2803 */
-.protyle-wysiwyg [data-node-id].li > .protyle-action ~ div {line-height:${height}px}
-.protyle-wysiwyg [data-node-id].li > .protyle-action ~ div > [spellcheck] {min-height:${height}px}
-.protyle-wysiwyg [data-node-id].li::before {height: calc(100% - ${height + 12}px);top:${(height + 12)}px}
 ${rtlCSS}
 .protyle-wysiwyg [data-node-id] {${window.siyuan.config.editor.justify ? " text-align: justify;" : ""}}
-.protyle-wysiwyg .li {min-height:${height + 8}px}
 .protyle-gutters button svg {height:${height}px}`;
     if (window.siyuan.config.editor.fontFamily) {
         style += `\n.b3-typography:not(.b3-typography--default), .protyle-wysiwyg, .protyle-title {font-family: "Emojis Additional", "Emojis Reset", "${window.siyuan.config.editor.fontFamily}", var(--b3-font-family)}`;
@@ -409,7 +363,7 @@ export const setMode = (modeElementValue: number) => {
                 }
             }
         }
-        appearance.onSetappearance(response.data);
+        appearance.onSetAppearance(response.data);
     });
     /// #endif
 };

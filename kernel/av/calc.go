@@ -16,13 +16,10 @@
 
 package av
 
-type Calculable interface {
-	CalcCols()
-}
-
+// ColumnCalc 描述了列（字段）计算操作和结果的结构。
 type ColumnCalc struct {
-	Operator CalcOperator `json:"operator"`
-	Result   *Value       `json:"result"`
+	Operator CalcOperator `json:"operator"` // 计算操作符
+	Result   *Value       `json:"result"`   // 计算结果
 }
 
 type CalcOperator string

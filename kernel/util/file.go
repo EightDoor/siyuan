@@ -184,6 +184,22 @@ func IsCorruptedSYData(data []byte) bool {
 	return false
 }
 
+func IsValidUploadFileName(name string) bool {
+	return name == FilterUploadFileName(name)
+}
+
+func FilterUploadEmojiFileName(name string) string {
+	if strings.HasPrefix(name, "api/icon/") {
+		// 忽略动态图标 https://github.com/siyuan-note/siyuan/issues/15139
+		return name
+	}
+
+	name = strings.ReplaceAll(name, "/", "_@slash@_")
+	name = FilterUploadFileName(name)
+	name = strings.ReplaceAll(name, "_@slash@_", "/")
+	return name
+}
+
 func FilterUploadFileName(name string) string {
 	ret := FilterFileName(name)
 
@@ -203,6 +219,7 @@ func FilterUploadFileName(name string) string {
 	ret = strings.ReplaceAll(ret, "#", "")
 	ret = strings.ReplaceAll(ret, "%", "")
 	ret = strings.ReplaceAll(ret, "$", "")
+	ret = strings.ReplaceAll(ret, ";", "")
 	ret = TruncateLenFileName(ret)
 	return ret
 }

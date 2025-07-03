@@ -1,4 +1,20 @@
 {
+  "allViews": "所有视图",
+  "copyAVID": "复制数据库 ID",
+  "hideEmptyFields": "隐藏空字段",
+  "displayEmptyFields": "显示空字段",
+  "cardAspectRatio": "预览区宽高比",
+  "cardPreview1": "卡片预览",
+  "contentImage": "内容图",
+  "cardSize": "卡片大小",
+  "large": "大",
+  "medium": "中",
+  "small": "小",
+  "fitImage": "自适应图片大小",
+  "showIcon": "显示图标",
+  "showAllFieldsIcon": "显示字段图标",
+  "wrapAllFields": "字段自动换行",
+  "gallery": "画廊",
   "newTag": "新建标签",
   "pleaseWait": "请稍等片刻...",
   "reconnectPrompt": "切换应用后再次进入需要一些时间恢复思源内核运行，请稍等几秒或者点击“重试”按钮",
@@ -498,8 +514,6 @@
   "backlinkExpandTip": "配置为 <code class='fn__code'>0</code> 则不展开",
   "backmentionExpand": "反向提及默认展开数",
   "backmentionExpandTip": "配置为 <code class='fn__code'>0</code> 则不展开，配置为 <code class='fn__code'>-1</code> 则收起面板",
-  "googleAnalytics": "Google Analytics",
-  "googleAnalyticsTip": "启用后会通过 <a href=\"https://analytics.google.com/\" target=\"_blank\">Google Analytics</a> 统计应用打开状态，不会收集用户数据和操作",
   "floatWindowMode": "浮窗触发方式",
   "floatWindowModeTip": "选择鼠标悬停块引、面包屑块标等位置触发浮窗的方式",
   "floatWindowMode0": "悬停",
@@ -1336,6 +1350,7 @@
   },
   "_attrView": {
     "table": "表格",
+    "gallery": "画廊",
     "key": "主键",
     "select": "单选"
   },
@@ -1596,6 +1611,8 @@
     "253": "正在压缩文件 [%s]，请稍等...",
     "254": "[Region ID] 不正确，请参考 S3 服务提供商的文档配置地域 ID",
     "255": "目标站点启用了防盗链，[%d] 个资源无法下载",
-    "256": "指定的路径 [%s] 父级存在工作空间路径 [%s]"
+    "256": "指定的路径 [%s] 父级存在工作空间路径 [%s]",
+    "257": "记住我 30 天",
+    "258": "操作失败，请稍后再试"
   }
 }

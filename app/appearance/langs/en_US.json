@@ -1,4 +1,20 @@
 {
+  "allViews": "All views",
+  "copyAVID": "Copy database ID",
+  "hideEmptyFields": "Hide empty fields",
+  "displayEmptyFields": "Display empty fields",
+  "cardAspectRatio": "Preview area aspect ratio",
+  "cardPreview1": "Card preview",
+  "contentImage": "Content image",
+  "cardSize": "Card size",
+  "large": "Large",
+  "medium": "Medium",
+  "small": "Small",
+  "fitImage": "Auto-fit image size",
+  "showIcon": "Show icon",
+  "showAllFieldsIcon": "Show field icons",
+  "wrapAllFields": "Auto-wrap fields",
+  "gallery": "Gallery",
   "newTag": "New tag",
   "pleaseWait": "Please wait...",
   "reconnectPrompt": "After switching applications, it will take some time to restore the SiYuan kernel operation. Please wait a few seconds or click the \"Retry\" button",
@@ -498,8 +514,6 @@
   "backlinkExpandTip": "If configured as <code class='fn__code'>0</code>",
   "backmentionExpand": "Backmention default expand",
   "backmentionExpandTip": "If configured as <code class='fn__code'>0</code>, it will not be expanded, if configured as <code class='fn__code'>-1</code>, the panel will be closed",
-  "googleAnalytics": "Google Analytics",
-  "googleAnalyticsTip": "When enabled, it will use <a href=\"https://analytics.google.com/\" target=\"_blank\">Google Analytics</a> to count the opening status of the application and will not collect users data and operations",
   "floatWindowMode": "Floating window trigger method",
   "floatWindowModeTip": "Choose how to trigger the floating window when the mouse hovers over the block icon, breadcrumb icon, etc.",
   "floatWindowMode0": "Hover",
@@ -1336,6 +1350,7 @@
   },
   "_attrView": {
     "table": "Table",
+    "gallery": "Gallery",
     "key": "Primary Key",
     "select": "Select"
   },
@@ -1596,6 +1611,8 @@
     "253": "Compressing file [%s], please wait...",
     "254": "[Region ID] Incorrect Region ID, please refer to the S3 service provider's documentation to configure the Region ID",
     "255": "The target site has enabled hotlink protection, so it is not possible to download [%d] resources",
-    "256": "The specified path [%s] has a parent workspace path [%s]"
+    "256": "The specified path [%s] has a parent workspace path [%s]",
+    "257": "Remember me for 30 days",
+    "258": "Operation failed, please try again later"
   }
 }

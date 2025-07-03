@@ -1,4 +1,20 @@
 {
+  "allViews": "Todas las vistas",
+  "copyAVID": "Copiar ID de la base de datos",
+  "hideEmptyFields": "Ocultar campos vacíos",
+  "displayEmptyFields": "Mostrar campos vacíos",
+  "cardAspectRatio": "Proporción del área de vista previa",
+  "cardPreview1": "Vista previa de la tarjeta",
+  "contentImage": "Imagen del contenido",
+  "cardSize": "Tamaño de la tarjeta",
+  "large": "Grande",
+  "medium": "Mediano",
+  "small": "Pequeño",
+  "fitImage": "Ajustar automáticamente el tamaño de la imagen",
+  "showIcon": "Mostrar ícono",
+  "showAllFieldsIcon": "Mostrar íconos de campos",
+  "wrapAllFields": "Ajuste automático de campos",
+  "gallery": "Galería",
   "newTag": "Nueva etiqueta",
   "pleaseWait": "Por favor, espere...",
   "reconnectPrompt": "Después de cambiar de aplicación, tomará algún tiempo restaurar el funcionamiento del núcleo de SiYuan. Espere unos segundos o haga clic en el botón \"Reintentar\"",
@@ -498,8 +514,6 @@
   "backlinkExpandTip": "Si se configura como <code class='fn__code'>0</code>",
   "backmentionExpand": "Expansión predeterminada de la mención",
   "backmentionExpandTip": "Si se configura como <code class='fn__code'>0</code>, no se expandirá, , si se configura como <code class='fn__code'>-1</code>, el panel se cerrará",
-  "googleAnalytics": "Google Analytics",
-  "googleAnalyticsTip": "Después de habilitarlo, usará <a href=\"https://analytics.google.com/\" target=\"_blank\">Google Analytics</a> para contar el estado de apertura del aplicación y no recopilará datos y operaciones de los usuarios",
   "floatWindowMode": "Método de activación de ventana flotante",
   "floatWindowModeTip": "Elija cómo activar la ventana flotante cuando el mouse pasa sobre el ícono de bloque, el ícono de ruta de navegación, etc.",
   "floatWindowMode0": "Flotar",
@@ -1336,6 +1350,7 @@
   },
   "_attrView": {
     "table": "Tabla",
+    "gallery": "Galería",
     "key": "Clave principal",
     "select": "Selección"
   },
@@ -1596,6 +1611,8 @@
     "253": "Comprimiendo el archivo [%s], por favor espere...",
     "254": "[Region ID] ID de región incorrecto, por favor consulte la documentación del proveedor de servicios S3 para configurar el ID de región",
     "255": "El sitio de destino ha activado la protección contra hotlinking, por lo que no es posible descargar [%d] recursos",
-    "256": "La ruta especificada [%s] tiene una ruta de espacio de trabajo padre [%s]"
+    "256": "La ruta especificada [%s] tiene una ruta de espacio de trabajo padre [%s]",
+    "257": "Recuérdame durante 30 días",
+    "258": "La operación falló, inténtelo de nuevo más tarde"
   }
 }
