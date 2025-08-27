@@ -418,6 +418,7 @@ func setFiletree(c *gin.Context) {
 	model.Conf.Save()
 
 	util.UseSingleLineSave = model.Conf.FileTree.UseSingleLineSave
+	util.LargeFileWarningSize = model.Conf.FileTree.LargeFileWarningSize
 
 	ret.Data = model.Conf.FileTree
 }
@@ -654,7 +655,12 @@ func setEmoji(c *gin.Context) {
 	argEmoji := arg["emoji"].([]interface{})
 	var emoji []string
 	for _, ae := range argEmoji {
-		emoji = append(emoji, ae.(string))
+		e := ae.(string)
+		if strings.Contains(e, ".") {
+			// XSS through emoji name https://github.com/siyuan-note/siyuan/issues/15034
+			e = util.FilterUploadEmojiFileName(e)
+		}
+		emoji = append(emoji, e)
 	}
 
 	model.Conf.Editor.Emoji = emoji

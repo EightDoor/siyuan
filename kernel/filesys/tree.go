@@ -32,6 +32,7 @@ import (
 	"github.com/88250/lute/render"
 	jsoniter "github.com/json-iterator/go"
 	"github.com/panjf2000/ants/v2"
+	"github.com/siyuan-note/dataparser"
 	"github.com/siyuan-note/filelock"
 	"github.com/siyuan-note/logging"
 	"github.com/siyuan-note/siyuan/kernel/cache"
@@ -41,6 +42,10 @@ import (
 
 func LoadTrees(ids []string) (ret map[string]*parse.Tree) {
 	ret = map[string]*parse.Tree{}
+	if 1 > len(ids) {
+		return ret
+	}
+
 	bts := treenode.GetBlockTrees(ids)
 	luteEngine := util.NewLute()
 	var boxIDs []string
@@ -215,6 +220,11 @@ func WriteTree(tree *parse.Tree) (size uint64, err error) {
 		return
 	}
 
+	if util.ExceedLargeFileWarningSize(len(data)) {
+		msg := fmt.Sprintf(util.Langs[util.Lang][268], tree.Root.IALAttr("title")+" "+filepath.Base(filePath), util.LargeFileWarningSize)
+		util.PushErrMsg(msg, 7000)
+	}
+
 	afterWriteTree(tree)
 	return
 }
@@ -238,11 +248,13 @@ func prepareWriteTree(tree *parse.Tree) (data []byte, filePath string, err error
 	tree.Root.SetIALAttr("type", "doc")
 	renderer := render.NewJSONRenderer(tree, luteEngine.RenderOptions)
 	data = renderer.Render()
+	data = bytes.ReplaceAll(data, []byte("\u0000"), []byte(""))
 
 	if !util.UseSingleLineSave {
 		buf := bytes.Buffer{}
 		buf.Grow(1024 * 1024 * 2)
 		if err = json.Indent(&buf, data, "", "\t"); err != nil {
+			logging.LogErrorf("json indent failed: %s", err)
 			return
 		}
 		data = buf.Bytes()
@@ -262,7 +274,7 @@ func afterWriteTree(tree *parse.Tree) {
 func parseJSON2Tree(boxID, p string, jsonData []byte, luteEngine *lute.Lute) (ret *parse.Tree) {
 	var err error
 	var needFix bool
-	ret, needFix, err = ParseJSON(jsonData, luteEngine.ParseOptions)
+	ret, needFix, err = dataparser.ParseJSON(jsonData, luteEngine.ParseOptions)
 	if err != nil {
 		logging.LogErrorf("parse json [%s] to tree failed: %s", boxID+p, err)
 		return

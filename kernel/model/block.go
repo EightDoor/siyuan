@@ -280,6 +280,42 @@ func GetBlockSiblingID(id string) (parent, previous, next string) {
 	return
 }
 
+func GetBlockRelevantIDs(id string) (parentID, previousID, nextID string, err error) {
+	tree, err := LoadTreeByBlockID(id)
+	if err != nil {
+		return
+	}
+
+	node := treenode.GetNodeInTree(tree, id)
+	if nil == node {
+		err = ErrBlockNotFound
+		return
+	}
+
+	if nil != node.Parent {
+		parentID = node.Parent.ID
+	}
+	if nil != node.Previous {
+		previous := node.Previous
+		if ast.NodeKramdownBlockIAL == previous.Type {
+			previous = previous.Previous
+		}
+		if nil != previous {
+			previousID = previous.ID
+		}
+	}
+	if nil != node.Next {
+		next := node.Next
+		if ast.NodeKramdownBlockIAL == next.Type {
+			next = next.Next
+		}
+		if nil != next {
+			nextID = next.ID
+		}
+	}
+	return
+}
+
 func GetUnfoldedParentID(id string) (parentID string) {
 	tree, err := LoadTreeByBlockID(id)
 	if err != nil {
@@ -655,6 +691,7 @@ func GetHeadingLevelTransaction(id string, level int) (transaction *Transaction,
 		ccH := c.ChildrenByType(ast.NodeHeading)
 		childrenHeadings = append(childrenHeadings, ccH...)
 	}
+	fillBlockRefCount(childrenHeadings)
 
 	transaction = &Transaction{}
 	luteEngine := util.NewLute()
@@ -686,13 +723,26 @@ func GetBlockDOM(id string) (ret string) {
 		return
 	}
 
-	tree, err := LoadTreeByBlockID(id)
-	if err != nil {
+	doms := GetBlockDOMs([]string{id})
+	ret = doms[id]
+	return
+}
+
+func GetBlockDOMs(ids []string) (ret map[string]string) {
+	ret = map[string]string{}
+	if 0 == len(ids) {
 		return
 	}
-	node := treenode.GetNodeInTree(tree, id)
+
 	luteEngine := NewLute()
-	ret = luteEngine.RenderNodeBlockDOM(node)
+	trees := filesys.LoadTrees(ids)
+	for id, tree := range trees {
+		node := treenode.GetNodeInTree(tree, id)
+		if nil == node {
+			continue
+		}
+		ret[id] = luteEngine.RenderNodeBlockDOM(node)
+	}
 	return
 }
 
@@ -713,6 +763,9 @@ func GetBlockKramdown(id, mode string) (ret string) {
 	root.PrependChild(node)
 	luteEngine := NewLute()
 	if "md" == mode {
+		// `/api/block/getBlockKramdown` link/image URLs are no longer encoded with spaces https://github.com/siyuan-note/siyuan/issues/15611
+		luteEngine.SetPreventEncodeLinkSpace(true)
+		
 		ret = treenode.ExportNodeStdMd(root, luteEngine)
 	} else {
 		tree.Root = root

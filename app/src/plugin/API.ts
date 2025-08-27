@@ -1,6 +1,6 @@
 import {confirmDialog} from "../dialog/confirmDialog";
 import {Plugin} from "./index";
-import {showMessage} from "../dialog/message";
+import {hideMessage, showMessage} from "../dialog/message";
 import {Dialog} from "../dialog";
 import {fetchGet, fetchPost, fetchSyncPost} from "../util/fetch";
 import {getBackend, getFrontend} from "../util/functions";
@@ -19,7 +19,7 @@ import {Protyle} from "../protyle";
 import {openMobileFileById} from "../mobile/editor";
 import {lockScreen, exitSiYuan} from "../dialog/processSystem";
 import {Model} from "../layout/Model";
-import {getDockByType} from "../layout/tabUtil";
+import {getActiveTab, getDockByType} from "../layout/tabUtil";
 /// #if !MOBILE
 import {getAllModels} from "../layout/getAll";
 /// #endif
@@ -27,6 +27,9 @@ import {getAllEditor} from "../layout/getAll";
 import {openSetting} from "../config";
 import {openAttr, openFileAttr} from "../menus/commonMenuItem";
 import {globalCommand} from "../boot/globalEvent/command/global";
+import {exportLayout} from "../layout/util";
+import {saveScroll} from "../protyle/scroll/saveScroll";
+import {hasClosestByClassName} from "../protyle/util/hasClosest";
 
 let openTab;
 let openWindow;
@@ -195,11 +198,62 @@ const openAttributePanel = (options: {
     }
 };
 
+const saveLayout = (cb: () => void) => {
+    /// #if MOBILE
+    if (window.siyuan.mobile.editor) {
+        const result = saveScroll(window.siyuan.mobile.editor.protyle);
+        if (cb && result instanceof Promise) {
+            result.then(() => {
+                cb();
+            });
+        }
+    }
+    /// #else
+    exportLayout({cb, errorExit: false});
+    /// #endif
+};
+
+const getActiveEditor = (wndActive = true) => {
+    let editor;
+    /// #if !MOBILE
+    const range = getSelection().rangeCount > 0 ? getSelection().getRangeAt(0) : null;
+    const allEditor = getAllEditor();
+    if (range) {
+        editor = allEditor.find(item => {
+            if (item.protyle.element.contains(range.startContainer)) {
+                return true;
+            }
+        });
+    }
+    if (!editor) {
+        editor = allEditor.find(item => {
+            if (hasClosestByClassName(item.protyle.element, "layout__wnd--active", true)) {
+                return true;
+            }
+        });
+    }
+    if (!editor && !wndActive) {
+        let activeTime = 0;
+        allEditor.forEach(item => {
+            const headerElement = item.protyle?.model.parent.headElement;
+            if (headerElement && headerElement.classList.contains("item--focus") && parseInt(headerElement.dataset.activetime) > activeTime) {
+                activeTime = parseInt(headerElement.dataset.activetime);
+                editor = item;
+            }
+        });
+    }
+    /// #else
+    editor = window.siyuan.mobile.popEditor || window.siyuan.mobile.editor;
+    /// #endif
+    return editor;
+};
+
 export const API = {
     adaptHotkey: updateHotkeyTip,
     confirm: confirmDialog,
     Constants,
     showMessage,
+    hideMessage,
     fetchPost,
     fetchSyncPost,
     fetchGet,
@@ -218,10 +272,13 @@ export const API = {
     Setting,
     getAllEditor,
     /// #if !MOBILE
+    getActiveTab,
     getAllModels,
     /// #endif
+    getActiveEditor,
     platformUtils,
     openSetting,
     openAttributePanel,
+    saveLayout,
     globalCommand,
 };

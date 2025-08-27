@@ -127,10 +127,16 @@ func ListNotebooks() (ret []*Box, err error) {
 		}
 
 		id := dir.Name()
+		icon := boxConf.Icon
+		if strings.Contains(icon, ".") { // 说明是自定义图标
+			// XSS through emoji name https://github.com/siyuan-note/siyuan/issues/15034
+			icon = util.FilterUploadEmojiFileName(icon)
+		}
+
 		box := &Box{
 			ID:       id,
 			Name:     boxConf.Name,
-			Icon:     boxConf.Icon,
+			Icon:     icon,
 			Sort:     boxConf.Sort,
 			SortMode: boxConf.SortMode,
 			Closed:   boxConf.Closed,
@@ -189,6 +195,13 @@ func (box *Box) GetConf() (ret *conf.BoxConf) {
 	if err = gulu.JSON.UnmarshalJSON(data, ret); err != nil {
 		logging.LogErrorf("parse box conf [%s] failed: %s", confPath, err)
 		return
+	}
+
+	icon := ret.Icon
+	if strings.Contains(icon, ".") {
+		// XSS through emoji name https://github.com/siyuan-note/siyuan/issues/15034
+		icon = util.FilterUploadEmojiFileName(icon)
+		ret.Icon = icon
 	}
 	return
 }
@@ -650,6 +663,49 @@ func normalizeTree(tree *parse.Tree) (yfmRootID, yfmTitle, yfmUpdated string) {
 	return
 }
 
+func VacuumDataIndex() {
+	util.PushEndlessProgress(Conf.language(270))
+	defer util.PushClearProgress()
+
+	var oldsyDbSize, newSyDbSize, oldHistoryDbSize, newHistoryDbSize, oldAssetContentDbSize, newAssetContentDbSize int64
+	info, _ := os.Stat(util.DBPath)
+	if nil != info {
+		oldsyDbSize = info.Size()
+	}
+	info, _ = os.Stat(util.HistoryDBPath)
+	if nil != info {
+		oldHistoryDbSize = info.Size()
+	}
+	info, _ = os.Stat(util.AssetContentDBPath)
+	if nil != info {
+		oldAssetContentDbSize = info.Size()
+	}
+
+	sql.Vacuum()
+
+	info, _ = os.Stat(util.DBPath)
+	if nil != info {
+		newSyDbSize = info.Size()
+	}
+	info, _ = os.Stat(util.HistoryDBPath)
+	if nil != info {
+		newHistoryDbSize = info.Size()
+	}
+	info, _ = os.Stat(util.AssetContentDBPath)
+	if nil != info {
+		newAssetContentDbSize = info.Size()
+	}
+
+	logging.LogInfof("vacuum database [siyuan.db: %s -> %s, history.db: %s -> %s, asset_content.db: %s -> %s]",
+		humanize.BytesCustomCeil(uint64(oldsyDbSize), 2), humanize.BytesCustomCeil(uint64(newSyDbSize), 2),
+		humanize.BytesCustomCeil(uint64(oldHistoryDbSize), 2), humanize.BytesCustomCeil(uint64(newHistoryDbSize), 2),
+		humanize.BytesCustomCeil(uint64(oldAssetContentDbSize), 2), humanize.BytesCustomCeil(uint64(newAssetContentDbSize), 2))
+
+	releaseSize := (oldsyDbSize - newSyDbSize) + (oldHistoryDbSize - newHistoryDbSize) + (oldAssetContentDbSize - newAssetContentDbSize)
+	msg := fmt.Sprintf(Conf.language(271), humanize.BytesCustomCeil(uint64(releaseSize), 2))
+	util.PushMsg(msg, 7000)
+}
+
 func FullReindex() {
 	task.AppendTask(task.DatabaseIndexFull, fullReindex)
 	task.AppendTask(task.DatabaseIndexRef, IndexRefs)
@@ -664,6 +720,12 @@ func FullReindex() {
 }
 
 func fullReindex() {
+	pushSQLInsertBlocksFTSMsg, pushSQLDeleteBlocksMsg = true, true
+	defer func() {
+		sql.FlushQueue()
+		pushSQLInsertBlocksFTSMsg, pushSQLDeleteBlocksMsg = false, false
+	}()
+
 	util.PushEndlessProgress(Conf.language(35))
 	defer util.PushClearProgress()
 
@@ -677,7 +739,7 @@ func fullReindex() {
 	sql.IndexIgnoreCached = false
 	openedBoxes := Conf.GetOpenedBoxes()
 	for _, openedBox := range openedBoxes {
-		index(openedBox.ID)
+		indexBox(openedBox.ID)
 	}
 	LoadFlashcards()
 	debug.FreeOSMemory()
@@ -693,6 +755,11 @@ func ChangeBoxSort(boxIDs []string) {
 }
 
 func SetBoxIcon(boxID, icon string) {
+	if strings.Contains(icon, ".") {
+		// XSS through emoji name https://github.com/siyuan-note/siyuan/issues/15034
+		icon = util.FilterUploadEmojiFileName(icon)
+	}
+
 	box := &Box{ID: boxID}
 	boxConf := box.GetConf()
 	boxConf.Icon = icon

@@ -149,7 +149,12 @@ func ExistsAssetText(asset string) (ret bool) {
 	return
 }
 
-func OcrAsset(asset string) (ret []map[string]interface{}) {
+func OcrAsset(asset string) (ret []map[string]interface{}, err error) {
+	if !TesseractEnabled {
+		err = fmt.Errorf(Langs[Lang][266])
+		return
+	}
+
 	assetsPath := GetDataAssetsAbsPath()
 	assetAbsPath := strings.TrimPrefix(asset, "assets")
 	assetAbsPath = filepath.Join(assetsPath, assetAbsPath)
@@ -340,7 +345,7 @@ func filterTesseractLangs(langs []string) (ret []string) {
 	} else {
 		for _, lang := range langs {
 			if "eng" == lang || strings.HasPrefix(lang, "chi") || "fra" == lang || "spa" == lang || "deu" == lang ||
-				"rus" == lang || "osd" == lang {
+				"rus" == lang || "jpn" == lang || "osd" == lang {
 				ret = append(ret, lang)
 			}
 		}

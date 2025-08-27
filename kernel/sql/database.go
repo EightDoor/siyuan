@@ -36,6 +36,7 @@ import (
 
 	"github.com/88250/gulu"
 	"github.com/88250/lute/ast"
+	"github.com/88250/lute/editor"
 	"github.com/88250/lute/html"
 	"github.com/88250/lute/parse"
 	"github.com/mattn/go-sqlite3"
@@ -666,8 +667,9 @@ func buildSpanFromNode(n *ast.Node, tree *parse.Tree, rootID, boxID, p string) (
 		return
 	case ast.NodeTextMark:
 		typ := treenode.TypeAbbr(n.Type.String()) + " " + n.TextMarkType
-		text := n.Content()
+		text := strings.TrimSuffix(n.Content(), string(gulu.ZWJ))
 		markdown := treenode.ExportNodeStdMd(n, luteEngine)
+		markdown = strings.ReplaceAll(markdown, string(gulu.ZWJ)+"#", "#")
 		parentBlock := treenode.ParentBlock(n)
 		span := &Span{
 			ID:       ast.NewNodeID(),
@@ -866,6 +868,16 @@ func buildBlockFromNode(n *ast.Node, tree *parse.Tree) (block *Block, attributes
 		}
 		length = utf8.RuneCountInString(content)
 	}
+
+	// 剔除零宽空格 Database index content/markdown values no longer contain zero-width spaces https://github.com/siyuan-note/siyuan/issues/15204
+	fcontent = strings.ReplaceAll(fcontent, editor.Zwsp, "")
+	content = strings.ReplaceAll(content, editor.Zwsp, "")
+	markdown = strings.ReplaceAll(markdown, editor.Zwsp, "")
+
+	// 剔除标签结尾处的零宽连字符 Improve search for emojis in tags https://github.com/siyuan-note/siyuan/issues/15391
+	fcontent = strings.ReplaceAll(fcontent, string(gulu.ZWJ)+"#", "#")
+	content = strings.ReplaceAll(content, string(gulu.ZWJ)+"#", "#")
+	markdown = strings.ReplaceAll(markdown, string(gulu.ZWJ)+"#", "#")
 
 	block = &Block{
 		ID:       n.ID,
@@ -1520,4 +1532,23 @@ func SQLTemplateFuncs(templateFuncMap *template.FuncMap) {
 		ret, _ = Query(stmt, 1024)
 		return
 	}
+}
+
+func Vacuum() {
+	if nil != db {
+		if _, err := db.Exec("VACUUM"); nil != err {
+			logging.LogErrorf("vacuum database failed: %s", err)
+		}
+	}
+	if nil != historyDB {
+		if _, err := historyDB.Exec("VACUUM"); nil != err {
+			logging.LogErrorf("vacuum history database failed: %s", err)
+		}
+	}
+	if nil != assetContentDB {
+		if _, err := assetContentDB.Exec("VACUUM"); nil != err {
+			logging.LogErrorf("vacuum asset content database failed: %s", err)
+		}
+	}
+	return
 }

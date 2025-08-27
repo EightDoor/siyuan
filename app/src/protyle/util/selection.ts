@@ -109,7 +109,7 @@ export const selectAll = (protyle: IProtyle, nodeElement: Element, range: Range)
     }
     range.collapse(true);
     const selectElements = protyle.wysiwyg.element.querySelectorAll(".protyle-wysiwyg--select");
-    if (protyle.wysiwyg.element.childElementCount === selectElements.length && selectElements[0].parentElement.isSameNode(protyle.wysiwyg.element)) {
+    if (protyle.wysiwyg.element.childElementCount === selectElements.length && (selectElements[0].parentElement === protyle.wysiwyg.element)) {
         return true;
     }
     hideElements(["select"], protyle);
@@ -139,7 +139,7 @@ export const getEditorRange = (element: Element): Range => {
     let range: Range;
     if (getSelection().rangeCount > 0) {
         range = getSelection().getRangeAt(0);
-        if (element.isSameNode(range.startContainer) || element.contains(range.startContainer)) {
+        if (element === range.startContainer || element.contains(range.startContainer)) {
             // 有时候点击编辑器头部需要矫正到第一个块中
             if (range.toString() === "" && range.startContainer.nodeType === 1 && range.startOffset === 0 &&
                 (range.startContainer as HTMLElement).classList.contains("protyle-wysiwyg")) {
@@ -485,7 +485,11 @@ export const focusByOffset = (container: Element, start: number, end: number, is
 };
 
 export const setInsertWbrHTML = (nodeElement: HTMLElement, range: Range, protyle: IProtyle) => {
-    const offset = getSelectionOffset(getContenteditableElement(nodeElement), nodeElement, range);
+    const editElement = getContenteditableElement(nodeElement);
+    if (!editElement) {
+        return;
+    }
+    const offset = getSelectionOffset(editElement, nodeElement, range);
     const cloneNode = nodeElement.cloneNode(true) as HTMLElement;
     const cloneRange = focusByOffset(cloneNode, offset.end, offset.end, false);
     if (cloneRange) {
@@ -524,7 +528,7 @@ export const focusByWbr = (element: Element, range: Range) => {
         }
     } else {
         const wbrPreviousSibling = hasPreviousSibling(wbrElement);
-        if (wbrPreviousSibling && wbrElement.previousElementSibling.isSameNode(wbrPreviousSibling)) {
+        if (wbrPreviousSibling && wbrElement.previousElementSibling === wbrPreviousSibling) {
             if (wbrElement.previousElementSibling.lastChild?.nodeType === 3) {
                 // <em>text</em><wbr> 需把光标放在里面，因为 chrome 点击后也是默认在里面
                 range.setStart(wbrElement.previousElementSibling.lastChild, wbrElement.previousElementSibling.lastChild.textContent.length);

@@ -5,6 +5,7 @@ import {avContextmenu} from "./action";
 import {hasClosestByClassName} from "../../util/hasClosest";
 import {Constants} from "../../../constants";
 import {upDownHint} from "../../../util/upDownHint";
+import {clearSelect} from "../../util/clearSelect";
 
 export const avKeydown = (event: KeyboardEvent, nodeElement: HTMLElement, protyle: IProtyle) => {
     if (!nodeElement.classList.contains("av") || !window.siyuan.menus.menu.element.classList.contains("fn__none")) {
@@ -41,10 +42,7 @@ export const avKeydown = (event: KeyboardEvent, nodeElement: HTMLElement, protyl
             return true;
         }
         if (event.key === "Escape") {
-            nodeElement.querySelectorAll(".av__cell--select, .av__cell--active").forEach(item => {
-                item.classList.remove("av__cell--select", "av__cell--active");
-                item.querySelector(".av__drag-fill")?.remove();
-            });
+            clearSelect(["cell"], nodeElement);
             selectRow(rowElement.querySelector(".av__firstcol"), "select");
             event.preventDefault();
             return true;
@@ -72,8 +70,7 @@ export const avKeydown = (event: KeyboardEvent, nodeElement: HTMLElement, protyl
                 newCellElement = previousCellElements[previousCellElements.length - 1];
             }
             if (newCellElement) {
-                selectCellElement.classList.remove("av__cell--select", "av__cell--active");
-                selectCellElement.querySelector(".av__drag-fill")?.remove();
+                clearSelect(["cell"], nodeElement);
                 newCellElement.classList.add("av__cell--select");
                 addDragFill(newCellElement);
                 cellScrollIntoView(nodeElement, newCellElement, false);
@@ -92,15 +89,19 @@ export const avKeydown = (event: KeyboardEvent, nodeElement: HTMLElement, protyl
                 newCellElement = nextRowElement.querySelector(".av__cell");
             }
             if (newCellElement) {
-                selectCellElement.classList.remove("av__cell--select", "av__cell--active");
-                selectCellElement.querySelector(".av__drag-fill")?.remove();
+                clearSelect(["cell"], nodeElement);
                 newCellElement.classList.add("av__cell--select");
                 addDragFill(newCellElement);
                 cellScrollIntoView(nodeElement, newCellElement, false);
             } else if (event.key !== "ArrowRight") {
-                selectCellElement.classList.remove("av__cell--select", "av__cell--active");
-                selectCellElement.querySelector(".av__drag-fill")?.remove();
-                insertRows(nodeElement, protyle, 1, rowElement.getAttribute("data-id"));
+                clearSelect(["cell"], nodeElement);
+                insertRows({
+                    blockElement: nodeElement,
+                    protyle,
+                    count: 1,
+                    previousID: rowElement.getAttribute("data-id"),
+                    groupID: rowElement.parentElement.getAttribute("data-group-id")
+                });
             }
             event.preventDefault();
             return true;
@@ -111,8 +112,7 @@ export const avKeydown = (event: KeyboardEvent, nodeElement: HTMLElement, protyl
                 newCellElement = previousRowElement.querySelector(`.av__cell[data-col-id="${selectCellElement.dataset.colId}"]`);
             }
             if (newCellElement) {
-                selectCellElement.classList.remove("av__cell--select", "av__cell--active");
-                selectCellElement.querySelector(".av__drag-fill")?.remove();
+                clearSelect(["cell"], nodeElement);
                 newCellElement.classList.add("av__cell--select");
                 addDragFill(newCellElement);
                 cellScrollIntoView(nodeElement, newCellElement);
@@ -126,8 +126,7 @@ export const avKeydown = (event: KeyboardEvent, nodeElement: HTMLElement, protyl
                 newCellElement = nextRowElement.querySelector(`.av__cell[data-col-id="${selectCellElement.dataset.colId}"]`);
             }
             if (newCellElement) {
-                selectCellElement.classList.remove("av__cell--select", "av__cell--active");
-                selectCellElement.querySelector(".av__drag-fill")?.remove();
+                clearSelect(["cell"], nodeElement);
                 newCellElement.classList.add("av__cell--select");
                 addDragFill(newCellElement);
                 cellScrollIntoView(nodeElement, newCellElement);
@@ -237,7 +236,7 @@ export const bindAVPanelKeydown = (event: KeyboardEvent) => {
             } else if (event.key === "Escape") {
                 avPanelElement.dispatchEvent(new CustomEvent("click", {detail: "close"}));
                 return true;
-            } else if (upDownHint(menuElement, event, "b3-menu__item--current", menuElement.firstElementChild)){
+            } else if (upDownHint(menuElement, event, "b3-menu__item--current", menuElement.firstElementChild)) {
                 return true;
             }
         }

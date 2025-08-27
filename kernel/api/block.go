@@ -86,6 +86,31 @@ func getBlockSiblingID(c *gin.Context) {
 	}
 }
 
+func getBlockRelevantIDs(c *gin.Context) {
+	ret := gulu.Ret.NewResult()
+	defer c.JSON(http.StatusOK, ret)
+
+	arg, ok := util.JsonArg(c, ret)
+	if !ok {
+		return
+	}
+
+	id := arg["id"].(string)
+	parentID, previousID, nextID, err := model.GetBlockRelevantIDs(id)
+	if nil != err {
+		ret.Code = -1
+		ret.Msg = err.Error()
+		ret.Data = map[string]interface{}{"closeTimeout": 7000}
+		return
+	}
+
+	ret.Data = map[string]string{
+		"parentID":   parentID,
+		"previousID": previousID,
+		"nextID":     nextID,
+	}
+}
+
 func transferBlockRef(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)
@@ -626,13 +651,14 @@ func getBlockInfo(c *gin.Context) {
 	}
 	rootTitle := root.IAL["title"]
 	rootTitle = html.UnescapeString(rootTitle)
+	icon := root.IAL["icon"]
 	ret.Data = map[string]string{
 		"box":         block.Box,
 		"path":        block.Path,
 		"rootID":      block.RootID,
 		"rootTitle":   rootTitle,
 		"rootChildID": rootChildID,
-		"rootIcon":    root.IAL["icon"],
+		"rootIcon":    icon,
 	}
 }
 
@@ -651,6 +677,25 @@ func getBlockDOM(c *gin.Context) {
 		"id":  id,
 		"dom": dom,
 	}
+}
+
+func getBlockDOMs(c *gin.Context) {
+	ret := gulu.Ret.NewResult()
+	defer c.JSON(http.StatusOK, ret)
+
+	arg, ok := util.JsonArg(c, ret)
+	if !ok {
+		return
+	}
+
+	idsArg := arg["ids"].([]interface{})
+	var ids []string
+	for _, id := range idsArg {
+		ids = append(ids, id.(string))
+	}
+
+	doms := model.GetBlockDOMs(ids)
+	ret.Data = doms
 }
 
 func getBlockKramdown(c *gin.Context) {

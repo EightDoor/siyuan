@@ -64,6 +64,7 @@ export const about = {
 </label>
 <label class="b3-label fn__flex">
     <div class="fn__flex-1">
+<<<<<<< HEAD
         ${window.siyuan.languages.googleAnalytics}
         <div class="b3-label__text">${window.siyuan.languages.googleAnalyticsTip}</div>
     </div>
@@ -72,6 +73,8 @@ export const about = {
 </label>
 <label class="b3-label fn__flex">
     <div class="fn__flex-1">
+=======
+>>>>>>> 2570a971a2c7ba61246adcb77026062a7bb1c652
         ${window.siyuan.languages.about11}
         <div class="b3-label__text">${window.siyuan.languages.about12}</div>
     </div>
@@ -101,11 +104,21 @@ export const about = {
 <div class="b3-label config__item${isBrowser() && !isInAndroid() && !isInIOS() && !isInHarmony() ? ' fn__none' : ' fn__flex'}">
     <div class="fn__flex-1">
        ${window.siyuan.languages.about2}
+<<<<<<< HEAD
         <div class="b3-label__text">${window.siyuan.languages.about3.replace('${port}', location.port)}</div>
         <div class="b3-label__text"><code class="fn__code">${window.siyuan.config.localIPs
             .filter((ip) => !(ip.startsWith('[') && ip.endsWith(']')))
             .join("</code> <code class='fn__code'>")}</code></div>
         <div class="b3-label__text"><code class="fn__code">${window.siyuan.config.localIPs.filter((ip) => ip.startsWith('[') && ip.endsWith(']')).join("</code> <code class='fn__code'>")}</code></div>
+=======
+        <div class="b3-label__text">${window.siyuan.languages.about3.replace("${port}", location.port)}</div>
+        ${(() => {
+            const ipv4 = window.siyuan.config.localIPs.filter(ip => !(ip.startsWith("[") && ip.endsWith("]")));
+            const ipv6 = window.siyuan.config.localIPs.filter(ip => (ip.startsWith("[") && ip.endsWith("]")));
+            return `<div class="b3-label__text${ipv4.length > 0 ? "" : " fn__none"}"><code class="fn__code">${ipv4.join("</code> <code class='fn__code'>")}</code></div>
+                    <div class="b3-label__text${ipv6.length > 0 ? "" : " fn__none"}"><code class="fn__code">${ipv6.join("</code> <code class='fn__code'>")}</code></div>`;
+        })()}
+>>>>>>> 2570a971a2c7ba61246adcb77026062a7bb1c652
         <div class="b3-label__text">${window.siyuan.languages.about18}</div>
     </div>
     <div class="fn__space"></div>
@@ -172,6 +185,26 @@ export const about = {
 </div>
 <div class="fn__flex b3-label config__item">
     <div class="fn__flex-1">
+        ${window.siyuan.languages.vacuumDataIndex}
+        <div class="b3-label__text">${window.siyuan.languages.vacuumDataIndexTip}</div>
+    </div>
+    <div class="fn__space"></div>
+    <button id="vacuumDataIndex" class="b3-button b3-button--outline fn__size200 fn__flex-center">
+        <svg><use xlink:href="#iconRefresh"></use></svg>${window.siyuan.languages.vacuumDataIndex}
+    </button>
+</div>
+<div class="fn__flex b3-label config__item">
+    <div class="fn__flex-1">
+        ${window.siyuan.languages.rebuildDataIndex}
+        <div class="b3-label__text">${window.siyuan.languages.rebuildDataIndexTip}</div>
+    </div>
+    <div class="fn__space"></div>
+    <button id="rebuildDataIndex" class="b3-button b3-button--outline fn__size200 fn__flex-center">
+        <svg><use xlink:href="#iconRefresh"></use></svg>${window.siyuan.languages.rebuildDataIndex}
+    </button>
+</div>
+<div class="fn__flex b3-label config__item">
+    <div class="fn__flex-1">
         ${window.siyuan.languages.systemLog}
         <div class="b3-label__text">${window.siyuan.languages.systemLogTip}</div>
     </div>
@@ -226,6 +259,7 @@ ${checkUpdateHTML}
         if (window.siyuan.config.system.isInsider) {
             about.element.querySelector('#isInsider').innerHTML = "<span class='ft__secondary'>Insider Preview</span>"
         }
+<<<<<<< HEAD
         const indexRetentionDaysElement = about.element.querySelector('#indexRetentionDays') as HTMLInputElement
         indexRetentionDaysElement.addEventListener('change', () => {
             fetchPost('/api/repo/setRepoIndexRetentionDays', { days: parseInt(indexRetentionDaysElement.value) }, () => {
@@ -257,6 +291,45 @@ ${checkUpdateHTML}
         updateElement?.addEventListener('click', () => {
             if (updateElement.firstElementChild.classList.contains('fn__rotate')) {
                 return
+=======
+        const indexRetentionDaysElement = about.element.querySelector("#indexRetentionDays") as HTMLInputElement;
+        indexRetentionDaysElement.addEventListener("change", () => {
+            fetchPost("/api/repo/setRepoIndexRetentionDays", {days: parseInt(indexRetentionDaysElement.value)}, () => {
+                window.siyuan.config.repo.indexRetentionDays = parseInt(indexRetentionDaysElement.value);
+            });
+        });
+        const retentionIndexesDailyElement = about.element.querySelector("#retentionIndexesDaily") as HTMLInputElement;
+        retentionIndexesDailyElement.addEventListener("change", () => {
+            fetchPost("/api/repo/setRetentionIndexesDaily", {indexes: parseInt(retentionIndexesDailyElement.value)}, () => {
+                window.siyuan.config.repo.retentionIndexesDaily = parseInt(retentionIndexesDailyElement.value);
+            });
+        });
+        const tokenElement = about.element.querySelector("#token") as HTMLInputElement;
+        tokenElement.addEventListener("click", () => {
+            tokenElement.select();
+        });
+        tokenElement.addEventListener("change", () => {
+            fetchPost("/api/system/setAPIToken", {token: tokenElement.value}, () => {
+                window.siyuan.config.api.token = tokenElement.value;
+                about.element.querySelector("#tokenTip").innerHTML = window.siyuan.languages.about14.replace("${token}", window.siyuan.config.api.token);
+            });
+        });
+        about.element.querySelector("#vacuumDataIndex").addEventListener("click", () => {
+            fetchPost("/api/system/vacuumDataIndex", {}, () => {});
+        });
+        about.element.querySelector("#rebuildDataIndex").addEventListener("click", () => {
+            fetchPost("/api/system/rebuildDataIndex", {}, () => {});
+        });
+        about.element.querySelector("#exportLog").addEventListener("click", () => {
+            fetchPost("/api/system/exportLog", {}, (response) => {
+                openByMobile(response.data.zip);
+            });
+        });
+        const updateElement = about.element.querySelector("#checkUpdateBtn");
+        updateElement?.addEventListener("click", () => {
+            if (updateElement.firstElementChild.classList.contains("fn__rotate")) {
+                return;
+>>>>>>> 2570a971a2c7ba61246adcb77026062a7bb1c652
             }
             updateElement.innerHTML = `<svg class="fn__rotate"><use xlink:href="#iconRefresh"></use></svg>${window.siyuan.languages.checkUpdate}`
             fetchPost('/api/system/checkUpdate', { showMsg: true }, () => {
@@ -350,33 +423,22 @@ ${checkUpdateHTML}
             fetchPost('/api/system/setNetworkServe', { networkServe: networkServeElement.checked }, () => {
                 exportLayout({
                     errorExit: true,
-                    cb: exitSiYuan,
-                })
-            })
-        })
-        const lockScreenModeElement = about.element.querySelector('#lockScreenMode') as HTMLInputElement
-        lockScreenModeElement.addEventListener('change', () => {
-            fetchPost('/api/system/setFollowSystemLockScreen', { lockScreenMode: lockScreenModeElement.checked ? 1 : 0 }, () => {
-                window.siyuan.config.system.lockScreenMode = lockScreenModeElement.checked ? 1 : 0
-            })
-        })
-        const googleAnalyticsElement = about.element.querySelector('#googleAnalytics') as HTMLInputElement
-        googleAnalyticsElement.addEventListener('change', () => {
-            fetchPost('/api/system/setGoogleAnalytics', { googleAnalytics: googleAnalyticsElement.checked }, () => {
-                exportLayout({
-                    errorExit: false,
-                    cb() {
-                        window.location.reload()
-                    },
-                })
-            })
-        })
-        const downloadInstallPkgElement = about.element.querySelector('#downloadInstallPkg') as HTMLInputElement
-        downloadInstallPkgElement.addEventListener('change', () => {
-            fetchPost('/api/system/setDownloadInstallPkg', { downloadInstallPkg: downloadInstallPkgElement.checked }, () => {
-                window.siyuan.config.system.downloadInstallPkg = downloadInstallPkgElement.checked
-            })
-        })
+                    cb: exitSiYuan
+                });
+            });
+        });
+        const lockScreenModeElement = about.element.querySelector("#lockScreenMode") as HTMLInputElement;
+        lockScreenModeElement.addEventListener("change", () => {
+            fetchPost("/api/system/setFollowSystemLockScreen", {lockScreenMode: lockScreenModeElement.checked ? 1 : 0}, () => {
+                window.siyuan.config.system.lockScreenMode = lockScreenModeElement.checked ? 1 : 0;
+            });
+        });
+        const downloadInstallPkgElement = about.element.querySelector("#downloadInstallPkg") as HTMLInputElement;
+        downloadInstallPkgElement.addEventListener("change", () => {
+            fetchPost("/api/system/setDownloadInstallPkg", {downloadInstallPkg: downloadInstallPkgElement.checked}, () => {
+                window.siyuan.config.system.downloadInstallPkg = downloadInstallPkgElement.checked;
+            });
+        });
         /// #if !BROWSER
         const autoLaunchElement = about.element.querySelector('#autoLaunch') as HTMLInputElement
         autoLaunchElement.addEventListener('change', () => {

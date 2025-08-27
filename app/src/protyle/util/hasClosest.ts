@@ -113,7 +113,7 @@ export const hasClosestBlock = (element: Node) => {
 export const isInEmbedBlock = (element: Element) => {
     const embedElement = hasTopClosestByAttribute(element, "data-type", "NodeBlockQueryEmbed");
     if (embedElement) {
-        if (embedElement.isSameNode(element)) {
+        if (embedElement === element) {
             return false;
         } else {
             return embedElement;
@@ -121,4 +121,11 @@ export const isInEmbedBlock = (element: Element) => {
     } else {
         return false;
     }
+};
+
+export const isInAVBlock = (element: Element) => {
+    if (hasClosestByClassName(element, "av__gallery-cover")) {
+        return hasClosestByClassName(element, "av");
+    }
+    return false;
 };
