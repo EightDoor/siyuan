@@ -332,6 +332,7 @@ export const hintSlash = (key: string, protyle: IProtyle) => {
         plugin.protyleSlash.forEach(slash => {
             allList.push({
                 filter: slash.filter,
+                id: slash.id,
                 value: `plugin${Constants.ZWSP}${plugin.name}${Constants.ZWSP}${slash.id}`,
                 html: slash.html
             });
@@ -414,10 +415,14 @@ export const genHintItemHTML = (item: IBlock) => {
     if (attrHTML) {
         attrHTML = `<div class="fn__flex b3-list-item__meta b3-list-item__showall">${attrHTML}</div>`;
     }
-
-    return `${attrHTML}<div class="b3-list-item__first">
+    let countHTML = "";
+    if (item.refCount) {
+        countHTML = `<span class="popover__block counter b3-tooltips b3-tooltips__w" aria-label="${window.siyuan.languages.ref}">${item.refCount}</span>`;
+    }
+    // data-node-id 用于获取引用面板
+    return `${attrHTML}<div class="b3-list-item__first" data-node-id="${item.id}">
     ${iconHTML}
-    <span class="b3-list-item__text">${item.content}</span>
+    <span class="b3-list-item__text">${item.content}</span>${countHTML}
 </div>
 <div class="b3-list-item__meta b3-list-item__showall">${item.hPath}</div>`;
 };
@@ -564,7 +569,7 @@ export const hintMoveBlock = (pathString: string, sourceElements: Element[], pro
             item.parentElement) {
             topSourceElement = getTopAloneElement(item);
             sideElement = topSourceElement.nextElementSibling || topSourceElement.previousElementSibling;
-            if (topSourceElement.isSameNode(item)) {
+            if (topSourceElement === item) {
                 topSourceElement = undefined;
             }
         }

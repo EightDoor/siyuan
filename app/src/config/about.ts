@@ -166,6 +166,26 @@ export const about = {
 </div>
 <div class="fn__flex b3-label config__item">
     <div class="fn__flex-1">
+        ${window.siyuan.languages.vacuumDataIndex}
+        <div class="b3-label__text">${window.siyuan.languages.vacuumDataIndexTip}</div>
+    </div>
+    <div class="fn__space"></div>
+    <button id="vacuumDataIndex" class="b3-button b3-button--outline fn__size200 fn__flex-center">
+        <svg><use xlink:href="#iconRefresh"></use></svg>${window.siyuan.languages.vacuumDataIndex}
+    </button>
+</div>
+<div class="fn__flex b3-label config__item">
+    <div class="fn__flex-1">
+        ${window.siyuan.languages.rebuildDataIndex}
+        <div class="b3-label__text">${window.siyuan.languages.rebuildDataIndexTip}</div>
+    </div>
+    <div class="fn__space"></div>
+    <button id="rebuildDataIndex" class="b3-button b3-button--outline fn__size200 fn__flex-center">
+        <svg><use xlink:href="#iconRefresh"></use></svg>${window.siyuan.languages.rebuildDataIndex}
+    </button>
+</div>
+<div class="fn__flex b3-label config__item">
+    <div class="fn__flex-1">
         ${window.siyuan.languages.systemLog}
         <div class="b3-label__text">${window.siyuan.languages.systemLogTip}</div>
     </div>
@@ -220,37 +240,43 @@ ${checkUpdateHTML}
         if (window.siyuan.config.system.isInsider) {
             about.element.querySelector('#isInsider').innerHTML = "<span class='ft__secondary'>Insider Preview</span>"
         }
-        const indexRetentionDaysElement = about.element.querySelector('#indexRetentionDays') as HTMLInputElement
-        indexRetentionDaysElement.addEventListener('change', () => {
-            fetchPost('/api/repo/setRepoIndexRetentionDays', { days: parseInt(indexRetentionDaysElement.value) }, () => {
-                window.siyuan.config.repo.indexRetentionDays = parseInt(indexRetentionDaysElement.value)
-            })
-        })
-        const retentionIndexesDailyElement = about.element.querySelector('#retentionIndexesDaily') as HTMLInputElement
-        retentionIndexesDailyElement.addEventListener('change', () => {
-            fetchPost('/api/repo/setRetentionIndexesDaily', { indexes: parseInt(retentionIndexesDailyElement.value) }, () => {
-                window.siyuan.config.repo.retentionIndexesDaily = parseInt(retentionIndexesDailyElement.value)
-            })
-        })
-        const tokenElement = about.element.querySelector('#token') as HTMLInputElement
-        tokenElement.addEventListener('click', () => {
-            tokenElement.select()
-        })
-        tokenElement.addEventListener('change', () => {
-            fetchPost('/api/system/setAPIToken', { token: tokenElement.value }, () => {
-                window.siyuan.config.api.token = tokenElement.value
-                about.element.querySelector('#tokenTip').innerHTML = window.siyuan.languages.about14.replace('${token}', window.siyuan.config.api.token)
-            })
-        })
-        about.element.querySelector('#exportLog').addEventListener('click', () => {
-            fetchPost('/api/system/exportLog', {}, (response) => {
-                openByMobile(response.data.zip)
-            })
-        })
-        const updateElement = about.element.querySelector('#checkUpdateBtn')
-        updateElement?.addEventListener('click', () => {
-            if (updateElement.firstElementChild.classList.contains('fn__rotate')) {
-                return
+        const indexRetentionDaysElement = about.element.querySelector("#indexRetentionDays") as HTMLInputElement;
+        indexRetentionDaysElement.addEventListener("change", () => {
+            fetchPost("/api/repo/setRepoIndexRetentionDays", {days: parseInt(indexRetentionDaysElement.value)}, () => {
+                window.siyuan.config.repo.indexRetentionDays = parseInt(indexRetentionDaysElement.value);
+            });
+        });
+        const retentionIndexesDailyElement = about.element.querySelector("#retentionIndexesDaily") as HTMLInputElement;
+        retentionIndexesDailyElement.addEventListener("change", () => {
+            fetchPost("/api/repo/setRetentionIndexesDaily", {indexes: parseInt(retentionIndexesDailyElement.value)}, () => {
+                window.siyuan.config.repo.retentionIndexesDaily = parseInt(retentionIndexesDailyElement.value);
+            });
+        });
+        const tokenElement = about.element.querySelector("#token") as HTMLInputElement;
+        tokenElement.addEventListener("click", () => {
+            tokenElement.select();
+        });
+        tokenElement.addEventListener("change", () => {
+            fetchPost("/api/system/setAPIToken", {token: tokenElement.value}, () => {
+                window.siyuan.config.api.token = tokenElement.value;
+                about.element.querySelector("#tokenTip").innerHTML = window.siyuan.languages.about14.replace("${token}", window.siyuan.config.api.token);
+            });
+        });
+        about.element.querySelector("#vacuumDataIndex").addEventListener("click", () => {
+            fetchPost("/api/system/vacuumDataIndex", {}, () => {});
+        });
+        about.element.querySelector("#rebuildDataIndex").addEventListener("click", () => {
+            fetchPost("/api/system/rebuildDataIndex", {}, () => {});
+        });
+        about.element.querySelector("#exportLog").addEventListener("click", () => {
+            fetchPost("/api/system/exportLog", {}, (response) => {
+                openByMobile(response.data.zip);
+            });
+        });
+        const updateElement = about.element.querySelector("#checkUpdateBtn");
+        updateElement?.addEventListener("click", () => {
+            if (updateElement.firstElementChild.classList.contains("fn__rotate")) {
+                return;
             }
             updateElement.innerHTML = `<svg class="fn__rotate"><use xlink:href="#iconRefresh"></use></svg>${window.siyuan.languages.checkUpdate}`
             fetchPost('/api/system/checkUpdate', { showMsg: true }, () => {
