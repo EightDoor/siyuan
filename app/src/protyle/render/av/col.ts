@@ -784,45 +784,43 @@ export const showColMenu = (protyle: IProtyle, blockElement: Element, cellElemen
 
     // 行号类型不参与筛选和排序
     if (type !== "lineNumber") {
-        if (type !== "mAsset") {
-            menu.addItem({
-                id: "filter",
-                icon: "iconFilter",
-                label: window.siyuan.languages.filter,
-                click() {
-                    fetchPost("/api/av/renderAttributeView", {
-                        id: avID,
-                    }, (response) => {
-                        const avData = response.data as IAV;
-                        let filter: IAVFilter;
-                        avData.view.filters.find((item) => {
-                            if (item.column === colId && item.value.type === type) {
-                                filter = item;
-                                return true;
-                            }
-                        });
-                        let empty = false;
-                        if (!filter) {
-                            empty = true;
-                            filter = {
-                                column: colId,
-                                operator: getDefaultOperatorByType(type),
-                                value: genCellValue(type, ""),
-                            };
-                            avData.view.filters.push(filter);
+        menu.addItem({
+            id: "filter",
+            icon: "iconFilter",
+            label: window.siyuan.languages.filter,
+            click() {
+                fetchPost("/api/av/renderAttributeView", {
+                    id: avID,
+                }, (response) => {
+                    const avData = response.data as IAV;
+                    let filter: IAVFilter;
+                    avData.view.filters.find((item) => {
+                        if (item.column === colId && item.value.type === type) {
+                            filter = item;
+                            return true;
                         }
-                        setFilter({
-                            empty,
-                            filter,
-                            protyle,
-                            data: avData,
-                            blockElement: blockElement,
-                            target: blockElement.querySelector(`.av__row--header .av__cell[data-col-id="${colId}"]`),
-                        });
                     });
-                }
-            });
-        }
+                    let empty = false;
+                    if (!filter) {
+                        empty = true;
+                        filter = {
+                            column: colId,
+                            operator: getDefaultOperatorByType(type),
+                            value: genCellValue(type, ""),
+                        };
+                        avData.view.filters.push(filter);
+                    }
+                    setFilter({
+                        empty,
+                        filter,
+                        protyle,
+                        data: avData,
+                        blockElement: blockElement,
+                        target: blockElement.querySelector(`.av__row--header .av__cell[data-col-id="${colId}"]`),
+                    });
+                });
+            }
+        });
         menu.addItem({
             id: "asc",
             icon: "iconUp",
@@ -932,11 +930,12 @@ export const showColMenu = (protyle: IProtyle, blockElement: Element, cellElemen
     });
     menu.addItem({
         icon: "iconSoftWrap",
-        label: `<label class="fn__flex" style="margin-bottom: 4px"><span>${window.siyuan.languages.wrap}</span><span class="fn__space fn__flex-1"></span>
+        label: `<label class="fn__flex fn__pointer"><span>${window.siyuan.languages.wrap}</span><span class="fn__space fn__flex-1"></span>
 <input type="checkbox" class="b3-switch b3-switch--menu"${cellElement.dataset.wrap === "true" ? " checked" : ""}></label>`,
         bind(element) {
             const wrapElement = element.querySelector(".b3-switch") as HTMLInputElement;
             wrapElement.addEventListener("change", () => {
+                cellElement.dataset.wrap = wrapElement.checked.toString();
                 transaction(protyle, [{
                     action: "setAttrViewColWrap",
                     id: colId,

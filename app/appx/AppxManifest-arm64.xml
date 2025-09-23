@@ -7,7 +7,7 @@
         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities">
     <!-- use single quotes to avoid double quotes escaping in the publisher value  -->
     <Identity Name="89C2A984.SiYuan"
-              ProcessorArchitecture="x64"
+              ProcessorArchitecture="arm64"
               Publisher="CN=087C656E-C1D9-42D8-8807-CED45A74FC0F"
               Version="3.3.3.0"/>
     <Properties>

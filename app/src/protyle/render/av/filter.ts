@@ -20,7 +20,7 @@ export const getDefaultOperatorByType = (type: TAVCol) => {
     if (["checkbox"].includes(type)) {
         return "Is false";
     }
-    if (["rollup", "relation", "rollup", "text", "mSelect", "url", "block", "email", "phone", "template"].includes(type)) {
+    if (["rollup", "relation", "mAsset", "text", "mSelect", "url", "block", "email", "phone", "template"].includes(type)) {
         return "Contains";
     }
 };
@@ -140,7 +140,7 @@ export const setFilter = async (options: {
                 newFilter.relativeDate = null;
                 newFilter.relativeDate2 = null;
             }
-        } else if (["text", "url", "block", "email", "phone", "template", "relation", "number"].includes(filterValue.type)) {
+        } else if (["text", "mAsset", "url", "block", "email", "phone", "template", "relation", "number"].includes(filterValue.type)) {
             newValue = genCellValue(filterValue.type, textElements[0].value);
         } else if (filterValue.type === "checkbox") {
             newValue = genCellValue(filterValue.type, {
@@ -156,9 +156,11 @@ export const setFilter = async (options: {
                 },
                 type: "rollup"
             };
-            newFilter.quantifier = (menu.element.querySelector('.b3-select[data-type="quantifier"]') as HTMLSelectElement).value;
         } else {
             newFilter.value = newValue;
+        }
+        if (["rollup", "mAsset"].includes(options.filter.value.type)) {
+            newFilter.quantifier = (menu.element.querySelector('.b3-select[data-type="quantifier"]') as HTMLSelectElement).value;
         }
         let isSame = false;
         options.data.view.filters.find((filter, index) => {
@@ -288,6 +290,7 @@ export const setFilter = async (options: {
             }
             break;
         case "block":
+        case "mAsset":
         case "text":
         case "url":
         case "phone":
@@ -351,7 +354,7 @@ export const setFilter = async (options: {
 <option ${"Is not empty" === options.filter.operator ? "selected" : ""} value="Is not empty">${window.siyuan.languages.filterOperatorIsNotEmpty}</option>`;
             break;
     }
-    if (options.filter.value.type === "rollup") {
+    if (["rollup", "mAsset"].includes(options.filter.value.type)) {
         menu.addItem({
             iconHTML: "",
             type: "readonly",
@@ -423,11 +426,13 @@ export const setFilter = async (options: {
                 }
             });
         });
-    } else if (["text", "url", "block", "email", "phone", "template", "relation"].includes(filterValue.type)) {
+    } else if (["text", "url", "block", "mAsset", "email", "phone", "template", "relation"].includes(filterValue.type)) {
         let value = "";
         if (filterValue) {
             if (filterValue.type === "relation") {
                 value = filterValue.relation.blockIDs[0] || "";
+            } else if (filterValue.type === "mAsset") {
+                value = filterValue.mAsset[0]?.content || "";
             } else {
                 value = filterValue[filterValue.type as "text"].content || "";
             }
@@ -609,7 +614,7 @@ export const addFilter = (options: {
             }
         });
         // 该列是行号类型列，则不允许添加到过滤器
-        if (!filter && column.type !== "mAsset" && column.type !== "lineNumber") {
+        if (!filter && column.type !== "lineNumber") {
             menu.addItem({
                 label: column.name,
                 iconHTML: column.icon ? unicode2Emoji(column.icon, "b3-menu__icon", true) : `<svg class="b3-menu__icon"><use xlink:href="#${getColIconByType(column.type)}"></use></svg>`,
@@ -651,7 +656,7 @@ export const getFiltersHTML = (data: IAV) => {
         fields.find((item) => {
             if (item.id === filter.column && item.type === filter.value.type) {
                 let filterText = "";
-                if (item.type === "rollup") {
+                if (["rollup", "mAsset"].includes(item.type)) {
                     if (filter.quantifier === "" || filter.quantifier === "Any") {
                         filterText = window.siyuan.languages.filterQuantifierAny + " ";
                     } else if (filter.quantifier === "All") {
@@ -731,8 +736,15 @@ export const getFiltersHTML = (data: IAV) => {
                     } else if ("<=" === filter.operator) {
                         filterText = ` ${filterText}≤ ${filterValue.number.content}`;
                     }
-                } else if (["text", "block", "url", "phone", "email", "relation", "template"].includes(filterValue.type) && filterValue[filterValue.type as "text"]) {
-                    const content = filterValue[filterValue.type as "text"].content || filterValue.relation?.blockIDs[0] || "";
+                } else if (["text", "block", "url", "mAsset", "phone", "email", "relation", "template"].includes(filterValue.type) && filterValue[filterValue.type as "text"]) {
+                    let content: string;
+                    if (filterValue.type === "relation") {
+                        content = filterValue.relation.blockIDs[0] || "";
+                    } else if (filterValue.type === "mAsset") {
+                        content = filterValue.mAsset[0]?.content || "";
+                    } else {
+                        content = filterValue[filterValue.type as "text"].content || "";
+                    }
                     if (content) {
                         if (["=", "Contains"].includes(filter.operator)) {
                             filterText = `: ${filterText}${content}`;

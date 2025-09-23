@@ -20,6 +20,7 @@ import {input} from "../wysiwyg/input";
 import {fetchPost} from "../../util/fetch";
 import {isIncludeCell} from "./table";
 import {getFieldIdByCellElement} from "../render/av/row";
+import {processClonePHElement} from "../render/util";
 
 const processAV = (range: Range, html: string, protyle: IProtyle, blockElement: HTMLElement) => {
     const tempElement = document.createElement("template");
@@ -450,26 +451,6 @@ export const insertHTML = (html: string, protyle: IProtyle, isBlock = false,
     if (tempElement.content.firstChild.nodeType === 3 || (tempElement.content.firstChild.nodeType === 1 && tempElement.content.firstElementChild.tagName !== "DIV")) {
         tempElement.innerHTML = protyle.lute.SpinBlockDOM(tempElement.innerHTML);
     }
-    // let foldHeadingId = "";
-    // let foldHTML = "";
-    // 粘贴内容中包含折叠的子节点需后端插入到原节点中
-    // Array.from(tempElement.content.children).forEach((item) => {
-    //     if (!item.getAttribute("parent-heading") && foldHeadingId && foldHTML) {
-    //         fetchPost("/api/block/appendHeadingChildren", {id: foldHeadingId, dom: foldHTML});
-    //         foldHeadingId = "";
-    //         foldHTML = "";
-    //     }
-    //     if (item.getAttribute("data-type") === "NodeHeading" && item.getAttribute("fold") === "1") {
-    //         foldHeadingId = item.getAttribute("data-node-id");
-    //         return true;
-    //     }
-    //     if (foldHeadingId && item.getAttribute("parent-heading")) {
-    //         foldHTML += item.outerHTML;
-    //     }
-    // });
-    // if (foldHeadingId && foldHTML) {
-    //     fetchPost("/api/block/appendHeadingChildren", {id: foldHeadingId, dom: foldHTML});
-    // }
     (insertBefore ? Array.from(tempElement.content.children) : Array.from(tempElement.content.children).reverse()).find((item) => {
         let addId = item.getAttribute("data-node-id");
         const hasParentHeading = item.getAttribute("parent-heading");
@@ -512,6 +493,7 @@ export const insertHTML = (html: string, protyle: IProtyle, isBlock = false,
             });
         }
         if (!hasParentHeading) {
+            processClonePHElement(item);
             if (insertBefore) {
                 blockElement.before(item);
             } else {

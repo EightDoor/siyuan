@@ -860,7 +860,8 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                                 const nextBlockElement = hasClosestBlock(nextRange.startContainer);
                                 if (nextBlockElement &&
                                     (!nextBlockElement.classList.contains("code-block") ||
-                                        (nextBlockElement.classList.contains("code-block") && getContenteditableElement(nextBlockElement).textContent == "\n"))
+                                        (nextBlockElement.classList.contains("code-block") &&
+                                            (getContenteditableElement(nextBlockElement).textContent == "\n") || nextBlockElement.parentElement.classList.contains("li")))
                                 ) {
                                     // 反向删除合并为一个块时，光标应保持在尾部 https://github.com/siyuan-note/siyuan/issues/14290#issuecomment-2849810529
                                     cloneRange.insertNode(document.createElement("wbr"));
@@ -914,7 +915,8 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                             currentNode.textContent === "") // https://ld246.com/article/1649251218696
                     )) {
                         if (!nodeElement.classList.contains("code-block") ||
-                            (nodeElement.classList.contains("code-block") && editElement.textContent == "\n")
+                            (nodeElement.classList.contains("code-block") &&
+                                (editElement.textContent == "\n" || nodeElement.parentElement.classList.contains("li")))
                         ) {
                             removeBlock(protyle, nodeElement, range, "Backspace");
                         }
@@ -1583,7 +1585,7 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                     } else {
                         protyle.hint.splitChar = "/";
                         protyle.hint.lastIndex = -1;
-                        protyle.hint.fill((isMatchCheck ? "* [ ] " : (isMatchList ? "* " : "1. ")) + Lute.Caret, protyle);
+                        protyle.hint.fill((isMatchCheck ? "- [ ] " : (isMatchList ? "- " : "1. ")) + Lute.Caret, protyle);
                     }
                 }
             } else {
