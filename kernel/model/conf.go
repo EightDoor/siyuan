@@ -1127,6 +1127,7 @@ func closeUserGuide() {
 
 		unindex(boxID)
 
+		sql.FlushQueue()
 		if removeErr := filelock.Remove(boxDirPath); nil != removeErr {
 			logging.LogErrorf("remove corrupted user guide box [%s] failed: %s", boxDirPath, removeErr)
 		}
