@@ -32,7 +32,30 @@
 
 ### 简介
 
-- 同步 https://github.com/siyuan-note/siyuan 更新
+* [💡 Introduction](#-introduction)
+* [🔮 Features](#-features)
+* [🏗️ Architecture and Ecosystem](#-architecture-and-ecosystem)
+* [🌟 Star History](#-star-history)
+* [🗺️ Roadmap](#️-roadmap)
+* [🚀 Download Setup](#-download-setup)
+  * [App Market](#app-market)
+  * [Installation Package](#installation-package)
+  * [Package Manager](#package-manager)
+  * [Docker Hosting](#docker-hosting)
+  * [Unraid Hosting](#unraid-hosting)
+  * [Insider Preview](#insider-preview)
+* [🏘️ Community](#️-community)
+* [🛠️ Development Guide](#️-development-guide)
+* [❓ FAQ](#-faq)
+  * [How does SiYuan store data?](#how-does-siyuan-store-data)
+  * [Does it support data synchronization through a third-party sync disk?](#does-it-support-data-synchronization-through-a-third-party-sync-disk)
+  * [Is SiYuan open source?](#is-siyuan-open-source)
+  * [How to upgrade to a new version?](#how-to-upgrade-to-a-new-version)
+  * [What if some blocks (such as paragraph blocks in list items) cannot find the block icon?](#what-if-some-blocks-such-as-paragraph-blocks-in-list-items-cannot-find-the-block-icon)
+  * [What should I do if the data repo key is lost?](#what-should-i-do-if-the-data-repo-key-is-lost)
+  * [Do I need to pay for it?](#do-i-need-to-pay-for-it)
+* [🙏 Acknowledgement](#-acknowledgement)
+  * [Contributors](#contributors)
 
 ### 修改项
 
@@ -58,9 +81,9 @@
 
 思源笔记是一款隐私优先的个人知识管理系统，支持细粒度块级引用和 Markdown 所见即所得。
 
-![feature0.png](https://b3logfile.com/file/2024/01/feature0-1orBRlI.png)
+![feature0.png](https://b3logfile.com/file/2025/11/feature0-GfbhEqf.png)
 
-![feature51.png](https://b3logfile.com/file/2024/02/feature5-1-uYYjAqy.png)
+![feature51.png](https://b3logfile.com/file/2025/11/feature5-1-7DJSfEP.png)
 
 ## 🔮 Features
 
@@ -146,6 +169,16 @@ Mobile:
 Desktop:
 
 - [Microsoft Store](https://www.microsoft.com/store/apps/9P7HPMXP73K4)
+
+### Package Manager
+
+#### `siyuan`
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/siyuan.svg)](https://repology.org/project/siyuan/versions)
+
+#### `siyuan-note`
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/siyuan-note.svg)](https://repology.org/project/siyuan-note/versions)
 
 ### Docker Hosting
 

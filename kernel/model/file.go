@@ -323,6 +323,11 @@ func ListDocTree(boxID, listPath string, sortMode int, flashcard, showHidden boo
 			}
 
 			continue
+		} else {
+			if strings.HasSuffix(file.name, ".sy") && !ast.IsNodeIDPattern(strings.TrimSuffix(file.name, ".sy")) {
+				// 不以块 ID 命名的 .sy 文件不应该被加载到思源中 https://github.com/siyuan-note/siyuan/issues/16089
+				continue
+			}
 		}
 
 		subFolder := filepath.Join(boxLocalPath, strings.TrimSuffix(file.path, ".sy"))
@@ -1027,7 +1032,7 @@ func CreateDocByMd(boxID, p, title, md string, sorts []string) (tree *parse.Tree
 	if 0 < len(sorts) {
 		ChangeFileTreeSort(box.ID, sorts)
 	} else {
-		box.addMinSort(path.Dir(tree.Path), tree.ID)
+		box.setSortByConf(path.Dir(tree.Path), tree.ID)
 	}
 	return
 }
@@ -1068,7 +1073,13 @@ func CreateWithMarkdown(tags, boxID, hPath, md, parentID, id string, withMath bo
 	SetBlockAttrs(retID, nameValues)
 
 	FlushTxQueue()
-	box.addMinSort(path.Dir(hPath), retID)
+
+	bt := treenode.GetBlockTree(retID)
+	if nil == bt {
+		logging.LogWarnf("get block tree by id [%s] failed after create", retID)
+		return
+	}
+	box.setSortByConf(path.Dir(bt.Path), retID)
 	return
 }
 
@@ -1543,16 +1554,7 @@ func removeDoc(box *Box, p string, luteEngine *lute.Lute) {
 		return
 	}
 
-	// 关联的属性视图也要复制到历史中 https://github.com/siyuan-note/siyuan/issues/9567
-	avNodes := tree.Root.ChildrenByType(ast.NodeAttributeView)
-	for _, avNode := range avNodes {
-		srcAvPath := filepath.Join(util.DataDir, "storage", "av", avNode.AttributeViewID+".json")
-		destAvPath := filepath.Join(historyDir, "storage", "av", avNode.AttributeViewID+".json")
-		if copyErr := filelock.Copy(srcAvPath, destAvPath); nil != copyErr {
-			logging.LogErrorf("copy av [%s] failed: %s", srcAvPath, copyErr)
-		}
-	}
-
+	generateAvHistory(tree, historyDir)
 	copyDocAssetsToDataAssets(box.ID, p)
 
 	removeIDs := treenode.RootChildIDs(tree.ID)
@@ -1992,6 +1994,29 @@ func (box *Box) removeSort(ids []string) {
 	}
 }
 
+func (box *Box) setSortByConf(parentPath, id string) {
+	if *Conf.FileTree.CreateDocAtTop {
+		box.addMinSort(parentPath, id)
+	} else {
+		box.addMaxSort(parentPath, id)
+	}
+}
+
+func (box *Box) addMaxSort(parentPath, id string) {
+	docs, _, err := ListDocTree(box.ID, parentPath, util.SortModeUnassigned, false, false, 102400)
+	if err != nil {
+		logging.LogErrorf("list doc tree failed: %s", err)
+		return
+	}
+
+	sortVal := 0
+	if 0 < len(docs) {
+		sortVal = docs[len(docs)-1].Sort + 1
+	}
+
+	box.setSortVal(id, sortVal)
+}
+
 func (box *Box) addMinSort(parentPath, id string) {
 	docs, _, err := ListDocTree(box.ID, parentPath, util.SortModeUnassigned, false, false, 1)
 	if err != nil {
@@ -2004,6 +2029,11 @@ func (box *Box) addMinSort(parentPath, id string) {
 		sortVal = docs[0].Sort - 1
 	}
 
+	box.setSortVal(id, sortVal)
+}
+
+func (box *Box) setSortVal(id string, sortVal int) {
+	var err error
 	confDir := filepath.Join(util.DataDir, box.ID, ".siyuan")
 	if err = os.MkdirAll(confDir, 0755); err != nil {
 		logging.LogErrorf("create conf dir failed: %s", err)
@@ -2025,7 +2055,6 @@ func (box *Box) addMinSort(parentPath, id string) {
 	}
 
 	fullSortIDs[id] = sortVal
-
 	data, err = gulu.JSON.MarshalJSON(fullSortIDs)
 	if err != nil {
 		logging.LogErrorf("marshal sort conf failed: %s", err)
@@ -2035,6 +2064,7 @@ func (box *Box) addMinSort(parentPath, id string) {
 		logging.LogErrorf("write sort conf failed: %s", err)
 		return
 	}
+	return
 }
 
 func (box *Box) addSort(previousPath, id string) {

@@ -19,6 +19,7 @@ import {afterLoadPlugin, loadPlugin, loadPlugins, reloadPlugin} from "../plugin/
 import {loadAssets} from "../util/assets";
 import {addScript} from "../protyle/util/addScript";
 import {useShell} from "../util/pathName";
+import {reloadOtherWindow} from "../dialog/processSystem";
 
 export const bazaar = {
     element: undefined as Element,
@@ -704,7 +705,8 @@ export const bazaar = {
                                         fetchPost("/api/petal/setPetalEnabled", {
                                             packageName: dataObj.name,
                                             enabled: true,
-                                            frontend: getFrontend()
+                                            frontend: getFrontend(),
+                                            app: Constants.SIYUAN_APPID,
                                         }, (response) => {
                                             loadPlugin(app, response.data);
                                             bazaar._genMyHTML(bazaarType, app, false);
@@ -837,9 +839,6 @@ export const bazaar = {
                             }, response => {
                                 this._genMyHTML(bazaarType, app);
                                 bazaar._onBazaar(response, bazaarType, ["themes", "icons"].includes(bazaarType));
-                                if (bazaarType === "plugins") {
-                                    uninstall(app, packageName, true);
-                                }
                             });
                         });
                     }
@@ -859,6 +858,7 @@ export const bazaar = {
                                 response.data.appearance = appearanceResponse.data;
                                 bazaar._onBazaar(response, "icons", true);
                                 bazaar._data.icons = response.data.packages;
+                                reloadOtherWindow();
                             });
                         });
                     } else if (bazaarType === "themes") {
@@ -868,6 +868,7 @@ export const bazaar = {
                             themeDark: mode === 1 ? packageName : window.siyuan.config.appearance.themeDark,
                             themeLight: mode === 0 ? packageName : window.siyuan.config.appearance.themeLight,
                         }), async (appearanceResponse) => {
+                            reloadOtherWindow();
                             if ((mode !== window.siyuan.config.appearance.mode ||
                                     (mode === 1 && window.siyuan.config.appearance.themeDark !== packageName) ||
                                     (mode === 0 && window.siyuan.config.appearance.themeLight !== packageName)) &&
@@ -922,7 +923,7 @@ export const bazaar = {
                             if (window.siyuan.config.bazaar.petalDisabled) {
                                 bazaar.element.querySelectorAll("#configBazaarDownloaded .b3-card").forEach(item => {
                                     item.classList.add("b3-card--disabled");
-                                    uninstall(app, JSON.parse(item.getAttribute("data-obj")).name);
+                                    uninstall(app, JSON.parse(item.getAttribute("data-obj")).name, false);
                                 });
                             } else {
                                 bazaar.element.querySelectorAll("#configBazaarDownloaded .b3-card").forEach(item => {
@@ -946,7 +947,8 @@ export const bazaar = {
                         fetchPost("/api/petal/setPetalEnabled", {
                             packageName: dataObj.name,
                             enabled,
-                            frontend: getFrontend()
+                            frontend: getFrontend(),
+                            app: Constants.SIYUAN_APPID,
                         }, (response) => {
                             target.removeAttribute("disabled");
                             if (enabled) {
@@ -959,7 +961,7 @@ export const bazaar = {
                                     }
                                 });
                             } else {
-                                uninstall(app, dataObj.name);
+                                uninstall(app, dataObj.name, false);
                                 target.parentElement.querySelector('[data-type="setting"]').classList.add("fn__none");
                             }
                         });

@@ -291,7 +291,7 @@ export class WYSIWYG {
                     selectElements[0].parentElement.classList.contains("list") &&   // 反链复制列表项 https://github.com/siyuan-note/siyuan/issues/6555
                     selectElements[0].parentElement.childElementCount - 1 === selectElements.length) {
                     const hasNoLiElement = selectElements.find(item => {
-                        if (!selectElements[0].contains(item)) {
+                        if (!selectElements[0].parentElement.contains(item)) {
                             return true;
                         }
                     });
@@ -307,9 +307,6 @@ export class WYSIWYG {
                         html += getTextStar(item) + "\n\n";
                     } else {
                         let itemHTML = "";
-                        if (item.getAttribute("data-type") === "NodeListItem") {
-                            listHTML = `<div data-subtype="${item.getAttribute("data-subtype")}" data-node-id="${Lute.NewNodeID()}" data-type="NodeList" class="list">`;
-                        }
                         if (item.getAttribute("data-type") === "NodeHeading" && item.getAttribute("fold") === "1") {
                             needClipboardWrite = true;
                             const response = await fetchSyncPost("/api/block/getHeadingChildrenDOM", {
@@ -326,12 +323,18 @@ export class WYSIWYG {
                         } else {
                             itemHTML = removeEmbed(item);
                         }
-                        if (listHTML && (i === selectElements.length - 1 ||
-                            selectElements[i + 1].getAttribute("data-type") !== "NodeListItem" ||
-                            selectElements[i + 1].getAttribute("data-subtype") !== item.getAttribute("data-subtype")
-                        )) {
-                            html += `${listHTML}${itemHTML}<div class="protyle-attr" contenteditable="false">${Constants.ZWSP}</div></div>`;
-                            listHTML = "";
+                        if (item.getAttribute("data-type") === "NodeListItem") {
+                            if (!listHTML) {
+                                listHTML = `<div data-subtype="${item.getAttribute("data-subtype")}" data-node-id="${Lute.NewNodeID()}" data-type="NodeList" class="list">`;
+                            }
+                            listHTML += itemHTML;
+                            if (i === selectElements.length - 1 ||
+                                selectElements[i + 1].getAttribute("data-type") !== "NodeListItem" ||
+                                selectElements[i + 1].getAttribute("data-subtype") !== item.getAttribute("data-subtype")
+                            ) {
+                                html += `${listHTML}<div class="protyle-attr" contenteditable="false">${Constants.ZWSP}</div></div>`;
+                                listHTML = "";
+                            }
                         } else {
                             html += itemHTML;
                         }
@@ -751,21 +754,21 @@ export class WYSIWYG {
                     if (!newWidth || newWidth === oldWidth) {
                         return;
                     }
-                    const viewId = nodeElement.getAttribute(Constants.CUSTOM_SY_AV_VIEW);
+                    const viewID = nodeElement.getAttribute(Constants.CUSTOM_SY_AV_VIEW);
                     transaction(protyle, [{
                         action: "setAttrViewColWidth",
                         id: dragColId,
                         avID: avId,
                         data: newWidth + "px",
                         blockID,
-                        keyID: viewId  // 仅前端使用，用于推送时不影响其他视图 https://github.com/siyuan-note/siyuan/issues/11019
+                        viewID // https://github.com/siyuan-note/siyuan/issues/11019
                     }], [{
                         action: "setAttrViewColWidth",
                         id: dragColId,
                         avID: avId,
                         data: oldWidth + "px",
                         blockID,
-                        keyID: viewId
+                        viewID
                     }]);
                 };
                 this.preventClick = true;
@@ -979,7 +982,8 @@ export class WYSIWYG {
             if (targetCellElement) {
                 target = targetCellElement;
             }
-            if (target.tagName === "TH" || target.tagName === "TD" || target.firstElementChild?.tagName === "TABLE" || target.classList.contains("table__resize") || target.classList.contains("table__select")) {
+            if (target.tagName === "TH" || target.tagName === "TD" || target.firstElementChild?.tagName === "TABLE" ||
+                target.classList.contains("table__resize") || target.classList.contains("table__select")) {
                 tableBlockElement = nodeElement;
                 if (tableBlockElement) {
                     tableBlockElement.querySelector(".table__select").removeAttribute("style");
@@ -1814,7 +1818,7 @@ export class WYSIWYG {
                     selectElements[0].parentElement.classList.contains("list") &&   // 反链复制列表项 https://github.com/siyuan-note/siyuan/issues/6555
                     selectElements[0].parentElement.childElementCount - 1 === selectElements.length) {
                     const hasNoLiElement = selectElements.find(item => {
-                        if (!selectElements[0].contains(item)) {
+                        if (!selectElements[0].parentElement.contains(item)) {
                             return true;
                         }
                     });
@@ -1826,9 +1830,6 @@ export class WYSIWYG {
                 for (let i = 0; i < selectElements.length; i++) {
                     const item = getTopAloneElement(selectElements[i]);
                     let itemHTML = "";
-                    if (item.getAttribute("data-type") === "NodeListItem") {
-                        listHTML = `<div data-subtype="${item.getAttribute("data-subtype")}" data-node-id="${Lute.NewNodeID()}" data-type="NodeList" class="list">`;
-                    }
                     if (item.getAttribute("data-type") === "NodeHeading" && item.getAttribute("fold") === "1") {
                         needClipboardWrite = true;
                         const response = await fetchSyncPost("/api/block/getHeadingChildrenDOM", {
@@ -1845,12 +1846,18 @@ export class WYSIWYG {
                     } else {
                         itemHTML = removeEmbed(item);
                     }
-                    if (listHTML && (i === selectElements.length - 1 ||
-                        selectElements[i + 1].getAttribute("data-type") !== "NodeListItem" ||
-                        selectElements[i + 1].getAttribute("data-subtype") !== item.getAttribute("data-subtype")
-                    )) {
-                        html += `${listHTML}${itemHTML}<div class="protyle-attr" contenteditable="false">${Constants.ZWSP}</div></div>`;
-                        listHTML = "";
+                    if (item.getAttribute("data-type") === "NodeListItem") {
+                        if (!listHTML) {
+                            listHTML = `<div data-subtype="${item.getAttribute("data-subtype")}" data-node-id="${Lute.NewNodeID()}" data-type="NodeList" class="list">`;
+                        }
+                        listHTML += itemHTML;
+                        if (i === selectElements.length - 1 ||
+                            selectElements[i + 1].getAttribute("data-type") !== "NodeListItem" ||
+                            selectElements[i + 1].getAttribute("data-subtype") !== item.getAttribute("data-subtype")
+                        ) {
+                            html += `${listHTML}<div class="protyle-attr" contenteditable="false">${Constants.ZWSP}</div></div>`;
+                            listHTML = "";
+                        }
                     } else {
                         html += itemHTML;
                     }
@@ -2159,6 +2166,11 @@ export class WYSIWYG {
                         action: "setAttrViewBlockView",
                         blockID: nodeElement.getAttribute("data-node-id"),
                         id: avTabHeaderElement.dataset.id,
+                        avID: nodeElement.getAttribute("data-av-id"),
+                    }], [{
+                        action: "setAttrViewBlockView",
+                        blockID: nodeElement.getAttribute("data-node-id"),
+                        id: avTabHeaderElement.parentElement.querySelector(".item--focus").getAttribute("data-id"),
                         avID: nodeElement.getAttribute("data-av-id"),
                     }]);
                     window.siyuan.menus.menu.remove();
@@ -3028,6 +3040,26 @@ export class WYSIWYG {
             setTimeout(() => {
                 // 选中后，在选中的文字上点击需等待 range 更新
                 let newRange = getEditorRange(this.element);
+                // 点击两侧或间隙导致光标跳转到开头 https://github.com/siyuan-note/siyuan/issues/16179
+                if (hasClosestBlock(event.target) !== hasClosestBlock(newRange.startContainer) &&
+                    this.element.querySelector("[data-node-id]")?.contains(newRange.startContainer)) {
+                    const rect = this.element.getBoundingClientRect();
+                    let rangeElement = document.elementFromPoint(rect.left + rect.width / 2, event.clientY);
+                    if (rangeElement === this.element) {
+                        rangeElement = document.elementFromPoint(rect.left + rect.width / 2, event.clientY + 8);
+                    }
+                    let blockElement = hasClosestBlock(rangeElement);
+                    if (blockElement) {
+                        const embedElement = isInEmbedBlock(blockElement);
+                        if (embedElement) {
+                            blockElement = embedElement;
+                        }
+                        newRange = focusBlock(blockElement, undefined, event.clientX < rect.left + parseInt(this.element.style.paddingLeft)) || newRange;
+                        if (protyle.options.render.breadcrumb) {
+                            protyle.breadcrumb.render(protyle, false, blockElement);
+                        }
+                    }
+                }
                 // https://github.com/siyuan-note/siyuan/issues/10357
                 const attrElement = hasClosestByClassName(newRange.endContainer, "protyle-attr");
                 if (attrElement) {
@@ -3052,7 +3084,8 @@ export class WYSIWYG {
                     countSelectWord(newRange, protyle.block.rootID);
                 }
                 if (getSelection().rangeCount === 0 && !mobileBlur) {
-                    // TODO https://github.com/siyuan-note/siyuan/issues/14589  点击 video 也可以测试一下 https://github.com/siyuan-note/siyuan/issues/14569
+                    // https://github.com/siyuan-note/siyuan/issues/14589
+                    // https://github.com/siyuan-note/siyuan/issues/14569
                     // https://github.com/siyuan-note/siyuan/issues/5901
                     focusByRange(newRange);
                 }

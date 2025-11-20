@@ -56,6 +56,7 @@ export const openFileById = async (options: {
         showMessage(response.msg);
         return;
     }
+
     return openFile({
         app: options.app,
         fileName: response.data.rootTitle,
@@ -384,17 +385,17 @@ const switchEditor = (editor: Editor, options: IOpenFileOptions, allModels: IMod
         preventScroll(editor.editor.protyle);
         editor.editor.protyle.observerLoad?.disconnect();
         if (options.action?.includes(Constants.CB_GET_HL)) {
-            highlightById(editor.editor.protyle, options.id, true);
+            highlightById(editor.editor.protyle, options.id, "start");
         } else if (options.action?.includes(Constants.CB_GET_FOCUS)) {
             if (nodeElement) {
-                const newRange = focusBlock(nodeElement, undefined, options.action?.includes(Constants.CB_GET_OUTLINE) ? false : true);
+                const newRange = focusBlock(nodeElement, undefined, !options.action?.includes(Constants.CB_GET_OUTLINE));
                 if (newRange) {
                     editor.editor.protyle.toolbar.range = newRange;
                 }
-                scrollCenter(editor.editor.protyle, nodeElement, true);
+                scrollCenter(editor.editor.protyle);
                 editor.editor.protyle.observerLoad = new ResizeObserver(() => {
                     if (document.contains(nodeElement)) {
-                        scrollCenter(editor.editor.protyle, nodeElement, true);
+                        scrollCenter(editor.editor.protyle);
                     }
                 });
                 setTimeout(() => {
@@ -406,12 +407,10 @@ const switchEditor = (editor: Editor, options: IOpenFileOptions, allModels: IMod
             } else if (editor.editor.protyle.toolbar.range) {
                 nodeElement = hasClosestBlock(editor.editor.protyle.toolbar.range.startContainer) as Element;
                 focusByRange(editor.editor.protyle.toolbar.range);
-                if (nodeElement) {
-                    scrollCenter(editor.editor.protyle, nodeElement);
-                }
+                scrollCenter(editor.editor.protyle);
             }
         }
-        pushBack(editor.editor.protyle, undefined, nodeElement || editor.editor.protyle.wysiwyg.element.firstElementChild);
+        pushBack(editor.editor.protyle, editor.editor.protyle.toolbar.range);
     }
     if (options.mode) {
         setEditMode(editor.editor.protyle, options.mode);
@@ -618,7 +617,7 @@ export const updateOutline = (models: IModels, protyle: IProtyle, reload = false
                 item.isPreview = !protyle.preview.element.classList.contains("fn__none");
                 item.update(response, blockId);
                 if (protyle) {
-                    item.updateDocTitle(protyle.background.ial);
+                    item.updateDocTitle(protyle.background.ial, response.data?.length || 0);
                     if (getSelection().rangeCount > 0) {
                         const startContainer = getSelection().getRangeAt(0).startContainer;
                         if (protyle.wysiwyg.element.contains(startContainer)) {
@@ -673,8 +672,8 @@ export const updateBacklinkGraph = (models: IModels, protyle: IProtyle) => {
         }
         item.element.querySelector('.block__icon[data-type="refresh"] svg').classList.add("fn__rotate");
         fetchPost("/api/ref/getBacklink2", {
-            sort: item.status[blockId] ? item.status[blockId].sort : "3",
-            mSort: item.status[blockId] ? item.status[blockId].mSort : "3",
+            sort: item.status[blockId] ? item.status[blockId].sort.toString() : window.siyuan.config.editor.backlinkSort.toString(),
+            mSort: item.status[blockId] ? item.status[blockId].mSort.toString() : window.siyuan.config.editor.backmentionSort.toString(),
             id: blockId || "",
             k: item.inputsElement[0].value,
             mk: item.inputsElement[1].value,

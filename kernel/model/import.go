@@ -799,32 +799,6 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 	moveIDs := map[string]string{}
 	assetsDone := map[string]string{}
 	if gulu.File.IsDir(localPath) { // 导入文件夹
-		// 收集所有资源文件
-		assets := map[string]string{}
-		filelock.Walk(localPath, func(currentPath string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if d == nil {
-				return nil
-			}
-			if localPath == currentPath {
-				return nil
-			}
-			if strings.HasPrefix(d.Name(), ".") {
-				if d.IsDir() {
-					return filepath.SkipDir
-				}
-				return nil
-			}
-
-			if !strings.HasSuffix(d.Name(), ".md") && !strings.HasSuffix(d.Name(), ".markdown") {
-				assets[currentPath] = currentPath
-				return nil
-			}
-			return nil
-		})
-
 		targetPaths := map[string]string{}
 		count := 0
 		// md 转换 sy
@@ -838,6 +812,24 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 			if strings.HasPrefix(d.Name(), ".") {
 				if d.IsDir() {
 					return filepath.SkipDir
+				}
+				return nil
+			}
+
+			if !d.IsDir() && !strings.HasSuffix(currentPath, ".md") && !strings.HasSuffix(currentPath, ".markdown") {
+				// 非 Markdown 文件作为资源文件处理 https://github.com/siyuan-note/siyuan/issues/13817
+				existName := assetsDone[currentPath]
+				var name string
+				if "" == existName {
+					name = filepath.Base(currentPath)
+					name = util.FilterUploadFileName(name)
+					name = util.AssetName(name, ast.NewNodeID())
+					assetTargetPath := filepath.Join(util.DataDir, "assets", name)
+					if err = filelock.Copy(currentPath, assetTargetPath); err != nil {
+						logging.LogErrorf("copy asset from [%s] to [%s] failed: %s", currentPath, assetTargetPath, err)
+						return nil
+					}
+					assetsDone[currentPath] = name
 				}
 				return nil
 			}
@@ -873,6 +865,11 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 			}
 
 			if d.IsDir() {
+				if "assets" == d.Name() {
+					// 如果是 assets 文件夹则跳过，里面的 Markdown 文件算作资源文件 https://github.com/siyuan-note/siyuan/issues/13817
+					return nil
+				}
+
 				if subMdFiles := util.GetFilePathsByExts(currentPath, []string{".md", ".markdown"}); 1 > len(subMdFiles) {
 					// 如果该文件夹中不包含 Markdown 文件则不处理 https://github.com/siyuan-note/siyuan/issues/11567
 					return nil
@@ -974,6 +971,14 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 
 				if !gulu.File.IsExist(absolutePath) {
 					return ast.WalkContinue
+				}
+
+				if strings.HasSuffix(absolutePath, ".md") || strings.HasSuffix(absolutePath, ".markdown") {
+					if !strings.Contains(absolutePath, "assets") {
+						// 链接 .md 文件的情况下只有路径中包含 assets 才算作资源文件，其他情况算作文档链接，后续在 convertMdHyperlinks2WikiLinks 中处理
+						// Supports converting relative path hyperlinks into document block references after importing Markdown https://github.com/siyuan-note/siyuan/issues/13817
+						return ast.WalkContinue
+					}
 				}
 
 				existName := assetsDone[absolutePath]
@@ -1135,8 +1140,9 @@ func ImportFromLocalPath(boxID, localPath string, toPath string) (err error) {
 		}
 
 		initSearchLinks()
+		convertMdHyperlinks2WikiLinks()
 		convertWikiLinksAndTags()
-		buildBlockRefInText()
+		mergeTextAndHandlerNestedInlines()
 
 		box := Conf.Box(boxID)
 		for i, tree := range importTrees {
@@ -1503,6 +1509,56 @@ func initSearchLinks() {
 	}
 }
 
+func convertMdHyperlinks2WikiLinks() {
+	// Supports converting relative path hyperlinks into document block references after importing Markdown https://github.com/siyuan-note/siyuan/issues/13817
+
+	var unlinks []*ast.Node
+	for _, tree := range importTrees {
+		ast.Walk(tree.Root, func(n *ast.Node, entering bool) ast.WalkStatus {
+			if !entering || ast.NodeTextMark != n.Type {
+				return ast.WalkContinue
+			}
+
+			if "a" != n.TextMarkType {
+				return ast.WalkContinue
+			}
+
+			linkText := n.TextMarkTextContent
+			if "" == linkText {
+				return ast.WalkContinue
+			}
+			linkDest := n.TextMarkAHref
+			if "" == linkDest {
+				return ast.WalkContinue
+			}
+			if strings.HasPrefix(linkDest, "assets/") {
+				return ast.WalkContinue
+			}
+			if !strings.HasSuffix(linkDest, ".md") && !strings.HasSuffix(linkDest, ".markdown") {
+				return ast.WalkContinue
+			}
+			linkDest = strings.TrimSuffix(linkDest, ".md")
+			linkDest = strings.TrimSuffix(linkDest, ".markdown")
+
+			buf := bytes.Buffer{}
+			buf.WriteString("[[")
+			buf.WriteString(linkDest)
+			buf.WriteString("|")
+			buf.WriteString(linkText)
+			buf.WriteString("]]")
+
+			wikilinkNode := &ast.Node{Type: ast.NodeText, Tokens: buf.Bytes()}
+			n.InsertBefore(wikilinkNode)
+			unlinks = append(unlinks, n)
+			return ast.WalkContinue
+		})
+	}
+
+	for _, n := range unlinks {
+		n.Unlink()
+	}
+}
+
 func convertWikiLinksAndTags() {
 	for _, tree := range importTrees {
 		convertWikiLinksAndTags0(tree)
@@ -1601,8 +1657,22 @@ func convertTags(text string) (ret string) {
 	return string(tokens)
 }
 
-// buildBlockRefInText 将文本节点进行结构化处理。
-func buildBlockRefInText() {
+func searchLinkID(link string) (id string) {
+	id = searchLinks[link]
+	if "" != id {
+		return
+	}
+
+	baseName := path.Base(link)
+	for searchLink, searchID := range searchLinks {
+		if path.Base(searchLink) == baseName {
+			return searchID
+		}
+	}
+	return
+}
+
+func mergeTextAndHandlerNestedInlines() {
 	luteEngine := NewLute()
 	luteEngine.SetHTMLTag2TextMark(true)
 	for _, tree := range importTrees {
@@ -1635,19 +1705,4 @@ func buildBlockRefInText() {
 			node.Unlink()
 		}
 	}
-}
-
-func searchLinkID(link string) (id string) {
-	id = searchLinks[link]
-	if "" != id {
-		return
-	}
-
-	baseName := path.Base(link)
-	for searchLink, searchID := range searchLinks {
-		if path.Base(searchLink) == baseName {
-			return searchID
-		}
-	}
-	return
 }

@@ -2,13 +2,7 @@ import {hasClosestBlock, hasClosestByClassName} from "../../util/hasClosest";
 import {focusBlock} from "../../util/selection";
 import {Menu} from "../../../plugin/Menu";
 import {transaction} from "../../wysiwyg/transaction";
-import {
-    genCellValue,
-    genCellValueByElement,
-    getTypeByCellElement,
-    renderCell,
-    renderCellAttr
-} from "./cell";
+import {genCellValue, genCellValueByElement, getTypeByCellElement, renderCell, renderCellAttr} from "./cell";
 import {fetchPost} from "../../../util/fetch";
 import * as dayjs from "dayjs";
 import {Constants} from "../../../constants";
@@ -263,11 +257,25 @@ export const setPageSize = (options: {
     avID: string,
     nodeElement: Element
 }) => {
-    const menu = new Menu("av-page-size");
+    const menu = new Menu(Constants.MENU_AV_PAGE_SIZE);
     if (menu.isOpen) {
         return;
     }
     const currentPageSize = options.target.dataset.size;
+    menu.addItem({
+        iconHTML: "",
+        label: "5",
+        checked: currentPageSize === "5",
+        click() {
+            updatePageSize({
+                currentPageSize,
+                newPageSize: "5",
+                protyle: options.protyle,
+                avID: options.avID,
+                nodeElement: options.nodeElement
+            });
+        }
+    });
     menu.addItem({
         iconHTML: "",
         label: "10",
@@ -436,7 +444,7 @@ export const insertRows = (options: {
         id: options.blockElement.dataset.nodeId,
         data: options.blockElement.getAttribute("updated")
     }]);
-    if (options.blockElement.getAttribute("data-av-type") === "gallery") {
+    if (["gallery", "kanban"].includes(options.blockElement.getAttribute("data-av-type"))) {
         insertGalleryItemAnimation({
             blockElement: options.blockElement,
             protyle: options.protyle,
