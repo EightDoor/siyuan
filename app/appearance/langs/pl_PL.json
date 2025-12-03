@@ -1,4 +1,6 @@
 {
+  "callout": "Wskazówka",
+  "hasAttrName": "Nazwa atrybutu ${x} już istnieje",
   "statusBarMsgPushTip": "Dzięki powiadomieniom na pasku stanu można na bieżąco poznać działanie systemu, a jeśli przeszkadzają, można je wyłączyć",
   "useBackground": "Wypełnij tło kolumny kolorem opcji",
   "print": "Drukuj",
@@ -918,6 +920,7 @@
   "moveToRight": "Przenieś w prawo",
   "copyProtocol": "Kopiuj hiperlink bloku",
   "copyProtocolInMd": "Kopiuj link Markdown bloku",
+  "copyWebURL": "Kopiuj URL internetowy",
   "uploadAssets2CDN": "Prześlij pliki zasobów do chmury",
   "uploadAssets2CDNConfirmTip": "Czy na pewno chcesz przesłać zasoby w tym dokumencie do chmury?",
   "notSupport1": "Nie wspiera przeciągania i upuszczania między notesami",

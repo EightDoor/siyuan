@@ -110,7 +110,6 @@ type TAVCol =
     | "updated"
     | "checkbox"
     | "lineNumber"
-type THintSource = "search" | "av" | "hint";
 type TAVFilterOperator =
     "="
     | "!="
@@ -228,6 +227,7 @@ interface Window {
             changeStatusBar: { postMessage: (url: string) => void }
             setClipboard: { postMessage: (url: string) => void }
             purchase: { postMessage: (url: string) => void }
+            print: { postMessage: (html: string) => void }
         }
     };
     htmlToImage: {
@@ -248,7 +248,7 @@ interface Window {
         readHTMLClipboard(): string
         getBlockURL(): string
         hideKeyboard(): void
-        print(html: string): void
+        print(title: string, html: string): void
         getScreenWidthPx(): number
     };
     JSHarmony: {
@@ -260,7 +260,7 @@ interface Window {
         readClipboard(): string
         readHTMLClipboard(): string
         returnDesktop(): void
-        print(html: string): void
+        print(title: string, html: string): void
         getScreenWidthPx(): number
     };
 
@@ -662,6 +662,7 @@ interface IOpenFileOptions {
             data: any,
         }) => import("../layout/Model").Model,   // plugin 0.8.3 历史兼容
     }
+    scrollPosition?: ScrollLogicalPosition,
     assetPath?: string, // asset 必填
     fileName?: string, // file 必填
     rootIcon?: string, // 文档图标

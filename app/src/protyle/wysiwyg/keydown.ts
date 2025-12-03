@@ -763,6 +763,16 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                     }
                 }
             }
+            if (selectText === "" && event.key === "ArrowLeft" && position.start === 1 &&
+                range.startContainer.textContent === Constants.ZWSP) {
+                range.setStart(range.startContainer, 0);
+                range.collapse(true);
+            }
+            if (selectText === "" && event.key === "ArrowRight" && position.start === 0 &&
+                range.startContainer.textContent === Constants.ZWSP) {
+                range.setStart(range.startContainer, 1);
+                range.collapse(true);
+            }
             return;
         }
 
@@ -1379,6 +1389,13 @@ export const keydown = (protyle: IProtyle, editorElement: HTMLElement) => {
                         nodeElement: selectsElement[0],
                         id: selectsElement[0].getAttribute("data-node-id"),
                         type: "CancelBlockquote",
+                    });
+                } else if (type === "NodeCallout") {
+                    turnsOneInto({
+                        protyle,
+                        nodeElement: selectsElement[0],
+                        id: selectsElement[0].getAttribute("data-node-id"),
+                        type: "CancelCallout",
                     });
                 }
             }

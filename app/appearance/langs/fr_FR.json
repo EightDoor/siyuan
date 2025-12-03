@@ -1,4 +1,6 @@
 {
+  "callout": "Astuce",
+  "hasAttrName": "Le nom d’attribut ${x} existe déjà",
   "statusBarMsgPushTip": "Via les messages de la barre d'état, vous pouvez connaître immédiatement le fonctionnement du système, si cela vous dérange vous pouvez les désactiver",
   "useBackground": "Remplir l'arrière-plan de la colonne avec la couleur de l'option",
   "print": "Imprimer",
@@ -918,6 +920,7 @@
   "moveToRight": "vers la Droite",
   "copyProtocol": "Copier bloc d'hyperliens",
   "copyProtocolInMd": "Copier le lien Markdown du bloc",
+  "copyWebURL": "Copier l'URL web",
   "uploadAssets2CDN": "Transférer les fichiers asset vers le Cloud",
   "uploadAssets2CDNConfirmTip": "Êtes-vous sûr de télécharger les ressources de ce document dans le cloud ?",
   "notSupport1": "Le glisser-déposer entre carnets n'est pas pris en charge",

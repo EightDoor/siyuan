@@ -508,14 +508,11 @@
     &.iframe {
       // https://ld246.com/article/1644827326901
       // https://github.com/siyuan-note/siyuan/issues/4172
-      &[data-type="NodeWidget"] .iframe-content,
-      &[data-type="NodeIFrame"] .iframe-content {
-        -webkit-user-modify: read-only;
-      }
-
-      .iframe-content {
-        display: inline-block;
-        position: relative;
+      &[data-type="NodeWidget"],
+      &[data-type="NodeIFrame"] {
+        .iframe-content {
+          -webkit-user-modify: read-only;
+        }
       }
 
       &--drag {
@@ -783,6 +780,17 @@
   .protyle-wysiwyg__embed .img:hover .protyle-action__drag,
   .protyle-wysiwyg__embed .iframe:hover .protyle-action__drag {
     display: none;
+  }
+
+  .callout-icon {
+    cursor: pointer;
+    padding: 4px;
+    border-radius: var(--b3-border-radius);
+    transition: var(--b3-background-transition);
+
+    &:hover {
+      background-color: var(--b3-list-hover);
+    }
   }
 }
 

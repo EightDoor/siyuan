@@ -1,4 +1,6 @@
 {
+  "callout": "Dica",
+  "hasAttrName": "O nome do atributo ${x} já existe",
   "statusBarMsgPushTip": "Por meio das mensagens na barra de status é possível saber imediatamente o funcionamento do sistema, se isso incomodar você pode desativá‑las",
   "useBackground": "Preencher o fundo da coluna com a cor da opção",
   "print": "Imprimir",
@@ -918,6 +920,7 @@
   "moveToRight": "Mover para Direita",
   "copyProtocol": "Copiar hiperlink do bloco",
   "copyProtocolInMd": "Copiar link Markdown do bloco",
+  "copyWebURL": "Copiar URL da web",
   "uploadAssets2CDN": "Enviar arquivos de ativos para a nuvem",
   "uploadAssets2CDNConfirmTip": "Tem certeza que deseja enviar os ativos neste documento para a nuvem?",
   "notSupport1": "Não suporta arrastar e soltar entre blocos de notas",

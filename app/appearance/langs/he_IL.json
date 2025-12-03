@@ -1,4 +1,6 @@
 {
+  "callout": "הערה",
+  "hasAttrName": "שם המאפיין ${x} כבר קיים",
   "statusBarMsgPushTip": "באמצעות הודעות בסרגל המצב ניתן לדעת מיד את מצב פעולתו של המערכת, ואם זה מפריע ניתן לכבות אותן",
   "useBackground": "מלא את רקע העמודה בצבע האפשרות",
   "print": "הדפס",
@@ -918,6 +920,7 @@
   "moveToRight": "העבר ימינה",
   "copyProtocol": "העתק היפר-קישור בלוק",
   "copyProtocolInMd": "העתק קישור Markdown של בלוק",
+  "copyWebURL": "העתק URL אינטרנט",
   "uploadAssets2CDN": "העלה קבצי נכסים לענן",
   "uploadAssets2CDNConfirmTip": "האם אתה בטוח להעלות את הנכסים במסמך זה לענן?",
   "notSupport1": "לא תומך בגרירת מסמכים בין מחברות",

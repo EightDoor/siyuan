@@ -489,13 +489,6 @@ export class Files extends Model {
             if (window.siyuan.config.readonly || event.dataTransfer.types.includes(Constants.SIYUAN_DROP_TAB)) {
                 return;
             }
-            const contentRect = this.element.getBoundingClientRect();
-            if (event.clientY < contentRect.top + Constants.SIZE_SCROLL_TB || event.clientY > contentRect.bottom - Constants.SIZE_SCROLL_TB) {
-                this.element.scroll({
-                    top: this.element.scrollTop + (event.clientY < contentRect.top + Constants.SIZE_SCROLL_TB ? -Constants.SIZE_SCROLL_STEP : Constants.SIZE_SCROLL_STEP),
-                    behavior: "smooth"
-                });
-            }
             let liElement = hasClosestByTag(event.target, "LI");
             if (!liElement) {
                 liElement = hasClosestByTag(document.elementFromPoint(event.clientX, event.clientY - 1), "LI");
@@ -777,6 +770,9 @@ export class Files extends Model {
         if (liElement) {
             liElement.setAttribute("data-count", data.data.subFileCount);
             liElement.querySelector(".ariaLabel")?.setAttribute("aria-label", this.genDocAriaLabel(data.data, escapeGreat));
+            if (data.data.subFileCount === 0) {
+                liElement.querySelector(".b3-list-item__toggle")?.classList.add("fn__hidden");
+            }
         }
     }
 

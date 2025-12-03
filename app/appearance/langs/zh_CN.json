@@ -1,4 +1,6 @@
 {
+  "callout": "提示",
+  "hasAttrName": "属性名 <b>${x}</b> 已存在",
   "statusBarMsgPushTip": "通过状态栏消息可以即时地了解系统的运行情况，如果感到打扰可以将其关闭",
   "useBackground": "按选项颜色填充列背景",
   "print": "打印",
@@ -918,6 +920,7 @@
   "moveToRight": "向右移",
   "copyProtocol": "复制块超链接",
   "copyProtocolInMd": "复制块 Markdown 链接",
+  "copyWebURL": "复制网页链接",
   "uploadAssets2CDN": "上传资源文件到图床",
   "uploadAssets2CDNConfirmTip": "确定将该文档内的资源文件上传到图床吗？",
   "notSupport1": "不支持跨笔记本进行拖拽",

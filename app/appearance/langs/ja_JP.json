@@ -1,4 +1,6 @@
 {
+  "callout": "ヒント",
+  "hasAttrName": "属性名 ${x} は既に存在します",
   "statusBarMsgPushTip": "ステータスバーのメッセージによってシステムの動作状況を即座に把握でき、迷惑に感じる場合はオフにできます",
   "useBackground": "オプションの色で列の背景を塗りつぶす",
   "print": "印刷",
@@ -918,6 +920,7 @@
   "moveToRight": "右に移動",
   "copyProtocol": "ハイパーリンクとしてコピー",
   "copyProtocolInMd": "Markdown リンクとしてコピー",
+  "copyWebURL": "ウェブURLをコピー",
   "uploadAssets2CDN": "アセットファイルをクラウドにアップロード",
   "uploadAssets2CDNConfirmTip": "このドキュメントのアセットをクラウドにアップロードしてもよろしいですか？",
   "notSupport1": "ノートブック間でのドラッグ＆ドロップはサポートされていません",

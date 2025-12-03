@@ -1,4 +1,6 @@
 {
+  "callout": "Hinweis",
+  "hasAttrName": "Der Attributname ${x} ist bereits vorhanden",
   "statusBarMsgPushTip": "Über Nachrichten in der Statusleiste können Sie den Zustand des Systems sofort erfahren, wenn sie stören, können Sie sie deaktivieren",
   "useBackground": "Spaltenhintergrund mit der Farbe der Option füllen",
   "print": "Drucken",
@@ -918,6 +920,7 @@
   "moveToRight": "Nach rechts bewegen",
   "copyProtocol": "Blockhyperlink kopieren",
   "copyProtocolInMd": "Block-Markdown-Link kopieren",
+  "copyWebURL": "Web-URL kopieren",
   "uploadAssets2CDN": "Asset-Dateien in die Cloud hochladen",
   "uploadAssets2CDNConfirmTip": "Sind Sie sicher, dass Sie die Assets in diesem Dokument in die Cloud hochladen möchten?",
   "notSupport1": "Unterstützt kein Drag & Drop über Notizen hinweg.",
