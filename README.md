@@ -1,8 +1,3 @@
-# 说明
-- 因为有了更好的方案了，这个仓库就不在更新了
-- https://github.com/appdev/siyuan-unlock(思源笔记免登录版本；可以不登录使用同步功能)
-- https://github.com/demoshang/siyuan-patch(siyuan patch 思源笔记本地VIP)
-
 <p align="center">
 <img alt="SiYuan" src="https://b3log.org/images/brand/siyuan-128.png">
 <br>
