@@ -359,8 +359,6 @@ const initMainWindow = () => {
         });
     });
 
-    currentWindow.webContents.session.setSpellCheckerLanguages(["en-US"]);
-
     // 发起互联网服务请求时绕过安全策略 https://github.com/siyuan-note/siyuan/issues/5516
     currentWindow.webContents.session.webRequest.onBeforeSendHeaders((details, cb) => {
         if (-1 < details.url.toLowerCase().indexOf("bili")) {
@@ -609,7 +607,7 @@ const initKernel = (workspace, port, lang) => {
                 writeLog("get kernel version failed: " + e.message);
                 if (14 < ++count) {
                     writeLog("get kernel ver failed");
-                    showErrorWindow("⚠️ 获取内核服务端口失败 Failed to get kernel serve port", "<div>获取内核服务端口失败，请确保程序拥有网络权限并不受防火墙和杀毒软件阻止。</div><div>Failed to get kernel serve port, please make sure the program has network permissions and is not blocked by firewalls and antivirus software.</div>");
+                    showErrorWindow("⚠️ 获取内核服务端口失败 Failed to Obtain Kernel Service Port", "<div>获取内核服务端口失败，请确保程序拥有网络权限并不受防火墙和杀毒软件阻止。</div><div>Failed to obtain kernel service port. Please ensure SiYuan has network permissions and is not blocked by firewalls or antivirus software.</div>");
                     bootWindow.destroy();
                     resolve(false);
                     return;
@@ -787,6 +785,9 @@ app.whenReady().then(() => {
         if (data.cmd === "getContentsId") {
             return event.sender.id;
         }
+        if (data.cmd === "availableSpellCheckerLanguages") {
+            return event.sender.session.availableSpellCheckerLanguages;
+        }
         if (data.cmd === "setProxy") {
             return setProxy(data.proxyURL, event.sender);
         }
@@ -824,10 +825,11 @@ app.whenReady().then(() => {
         if (data.cmd === "siyuan-open-file") {
             let hasMatch = false;
             BrowserWindow.getAllWindows().find(item => {
-                if (item.webContents.id === event.sender.id) {
+                const url = new URL(item.webContents.getURL());
+                if (item.webContents.id === event.sender.id || data.port !== url.port) {
                     return;
                 }
-                const ids = decodeURIComponent(new URL(item.webContents.getURL()).hash.substring(1)).split("\u200b");
+                const ids = decodeURIComponent(url.hash.substring(1)).split("\u200b");
                 const options = JSON.parse(data.options);
                 if (ids.includes(options.rootID) || ids.includes(options.assetPath)) {
                     item.focus();
@@ -893,6 +895,11 @@ app.whenReady().then(() => {
         switch (cmd) {
             case "showItemInFolder":
                 shell.showItemInFolder(data.filePath);
+                break;
+            case "setSpellCheckerLanguages":
+                BrowserWindow.getAllWindows().forEach(item => {
+                    item.webContents.session.setSpellCheckerLanguages(data.languages);
+                });
                 break;
             case "openPath":
                 shell.openPath(data.filePath);
