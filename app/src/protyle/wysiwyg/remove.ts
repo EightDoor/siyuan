@@ -55,7 +55,7 @@ export const removeBlock = async (protyle: IProtyle, blockElement: Element, rang
         const unfoldData: {
             [key: string]: {
                 element: Element,
-                previousID: string
+                previousID?: string
             }
         } = {};
         for (let i = 0; i < selectElements.length; i++) {
@@ -148,6 +148,13 @@ export const removeBlock = async (protyle: IProtyle, blockElement: Element, rang
                     listElement = topElement.parentElement;
                 } else {
                     listElement = undefined;
+                }
+                // https://github.com/siyuan-note/siyuan/issues/12327
+                if (topElement.parentElement.classList.contains("li") && topElement.parentElement.childElementCount === 4 &&
+                    topElement.parentElement.getAttribute("fold") === "1") {
+                    unfoldData[topElement.parentElement.getAttribute("data-node-id")] = {
+                        element: topElement.parentElement,
+                    };
                 }
                 topElement.remove();
             }
@@ -504,6 +511,14 @@ export const removeBlock = async (protyle: IProtyle, blockElement: Element, rang
         // 图片前删除到上一个文字块时，图片前有 zwsp
         previousLastElement.outerHTML = protyle.lute.SpinBlockDOM(previousLastElement.outerHTML);
         mathRender(getPreviousBlock(removeElement) as HTMLElement);
+        const removeParentElement = removeElement.parentElement;
+        // https://github.com/siyuan-note/siyuan/issues/12327
+        if (removeParentElement.classList.contains("li") && removeParentElement.childElementCount === 4 &&
+            removeParentElement.getAttribute("fold") === "1") {
+            const foldOperations = setFold(protyle, removeParentElement, true, false, false, true);
+            doOperations.push(...foldOperations.doOperations);
+            undoOperations.splice(0, 0, ...foldOperations.undoOperations);
+        }
         removeElement.remove();
         // extractContents 内容过多时需要进行滚动条重置，否则位置会错位
         protyle.contentElement.scrollTop = scroll;
@@ -655,7 +670,8 @@ const removeLi = (protyle: IProtyle, blockElement: Element, range: Range, isDele
                 protyle,
                 selectsElement: selectsElement.reverse(),
                 type: "BlocksMergeSuperBlock",
-                level: "row"
+                level: "row",
+                unfocus: true,
             });
         }
         focusByWbr(protyle.wysiwyg.element, range);

@@ -86,9 +86,9 @@ func Templates() (templates []*Template) {
 			return
 		}
 
-		if disallowDisplayBazaarPackage(template.Package) {
-			return
-		}
+		template.DisallowInstall = disallowInstallBazaarPackage(template.Package)
+		template.DisallowUpdate = disallowInstallBazaarPackage(template.Package)
+		template.UpdateRequiredMinAppVer = template.MinAppVersion
 
 		template.URL = strings.TrimSuffix(template.URL, "/")
 		repoURLHash := strings.Split(repoURL, "@")
@@ -160,8 +160,13 @@ func InstalledTemplates() (ret []*Template) {
 			continue
 		}
 
-		installPath := filepath.Join(util.DataDir, "templates", dirName)
+		template.DisallowInstall = disallowInstallBazaarPackage(template.Package)
+		if bazaarPkg := getBazaarTemplate(template.Name, bazaarTemplates); nil != bazaarPkg {
+			template.DisallowUpdate = disallowInstallBazaarPackage(bazaarPkg.Package)
+			template.UpdateRequiredMinAppVer = bazaarPkg.MinAppVersion
+		}
 
+		installPath := filepath.Join(util.DataDir, "templates", dirName)
 		template.Installed = true
 		template.RepoURL = template.URL
 		template.PreviewURL = "/templates/" + dirName + "/preview.png"
@@ -189,6 +194,15 @@ func InstalledTemplates() (ret []*Template) {
 		ret = append(ret, template)
 	}
 	return
+}
+
+func getBazaarTemplate(name string, templates []*Template) *Template {
+	for _, p := range templates {
+		if p.Name == name {
+			return p
+		}
+	}
+	return nil
 }
 
 func InstallTemplate(repoURL, repoHash, installPath string, systemID string) error {

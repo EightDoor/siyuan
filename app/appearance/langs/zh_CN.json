@@ -1,4 +1,7 @@
 {
+  "recentDocsMaxListCount": "最近的文档最大数量",
+  "recentDocsMaxListCountTip": "最近的文档对话框中列出文档的最大数量",
+  "bazaarNeedVersion": "需升级到思源笔记 v${x} 或更高版本才能使用",
   "downloadRollback": "下载并回滚",
   "callout": "提示",
   "hasAttrName": "属性名 <b>${x}</b> 已存在",
@@ -740,6 +743,7 @@
   "exportPDF3": "页面缩放",
   "exportPDF4": "嵌入资源文件",
   "exportPDF5": "保持折叠状态",
+  "paged": "分页",
   "mergeSubdocs": "合并子文档",
   "removeAssetsFolder": "移除 assets 目录",
   "upload": "上传",

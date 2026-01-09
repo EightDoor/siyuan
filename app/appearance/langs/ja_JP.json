@@ -1,4 +1,7 @@
 {
+  "recentDocsMaxListCount": "最近のドキュメントの最大表示数",
+  "recentDocsMaxListCountTip": "最近のドキュメントダイアログに最大で表示されるドキュメント数",
+  "bazaarNeedVersion": "使用するには SiYuan を v${x} 以上にアップグレードする必要があります",
   "downloadRollback": "ダウンロードしてロールバック",
   "callout": "ヒント",
   "hasAttrName": "属性名 ${x} は既に存在します",
@@ -740,6 +743,7 @@
   "exportPDF3": "ページスケール",
   "exportPDF4": "アセットの埋め込み",
   "exportPDF5": "折りたたみを保持",
+  "paged": "ページ分割",
   "mergeSubdocs": "サブドキュメントをマージ",
   "removeAssetsFolder": "アセットディレクトリを削除",
   "upload": "アップロード",
