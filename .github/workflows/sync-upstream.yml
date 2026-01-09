@@ -99,7 +99,7 @@ jobs:
       - name: Get current time
         id: time
         run: |
-          echo "datetime=$(date +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_OUTPUT
+          echo "datetime=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S CST')" >> $GITHUB_OUTPUT
 
       - name: Send email notification on success
         if: steps.merge.outputs.merge_success == 'true'
