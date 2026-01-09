@@ -1,4 +1,7 @@
 {
+  "recentDocsMaxListCount": "Maximum number of recent documents listed",
+  "recentDocsMaxListCountTip": "Maximum number of documents listed in the Recent Documents dialog",
+  "bazaarNeedVersion": "Requires upgrading SiYuan to v${x} or later to use",
   "downloadRollback": "Download and rollback",
   "callout": "Callout",
   "hasAttrName": "The attribute name ${x} already exists",
@@ -740,6 +743,7 @@
   "exportPDF3": "Page Scale",
   "exportPDF4": "Embed assets",
   "exportPDF5": "Keep folded",
+  "paged": "Paged",
   "mergeSubdocs": "Merge subdocuments",
   "removeAssetsFolder": "Remove assets directory",
   "upload": "Upload",

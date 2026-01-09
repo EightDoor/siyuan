@@ -1,4 +1,4 @@
-import {hasClosestBlock, hasClosestByAttribute, isInEmbedBlock} from "../util/hasClosest";
+import {hasClosestBlock, isInEmbedBlock} from "../util/hasClosest";
 import {Constants} from "../../constants";
 
 export const getParentBlock = (element: Element) => {
@@ -78,13 +78,34 @@ export const getNoContainerElement = (element: Element) => {
     return false;
 };
 
-export const getContenteditableElement = (element: Element) => {
-    if (!element || (element.getAttribute("contenteditable") === "true") && !element.classList.contains("protyle-wysiwyg")) {
+export const getContenteditableElement = (element: Element): Element => {
+    if (!element) {
         return element;
     }
-    const editableElement = element.querySelector('[contenteditable="true"]');
-    if (editableElement && !hasClosestByAttribute(editableElement, "data-type", "NodeBlockQueryEmbed")) {
-        return editableElement;
+    let blockElement = element;
+    if (!blockElement.getAttribute("data-node-id")) {
+        blockElement = element.querySelector("[data-node-id]");
+    }
+    if (!blockElement) {
+        const tempBlockElement = hasClosestBlock(element);
+        if (tempBlockElement && element === getContenteditableElement(tempBlockElement)) {
+            return element;
+        }
+        return undefined;
+    }
+    const type = blockElement.getAttribute("data-type");
+    if (["NodeParagraph", "NodeHeading"].includes(type)) {
+        return blockElement.firstElementChild;
+    } else if ("NodeTable" === type) {
+        return blockElement.querySelector("table");
+    } else if ("NodeCodeBlock" === type && blockElement.classList.contains("code-block")) {
+        return blockElement.querySelector(".hljs").lastElementChild;
+    } else if ("NodeAttributeView" === type) {
+        return blockElement.querySelector(".av__title");
+    } else if (["NodeBlockQueryEmbed", "NodeMathBlock", "NodeHTMLBlock"].includes(type)) {
+        return undefined;
+    } else if (blockElement.getAttribute("data-node-id")) {
+        return getContenteditableElement(blockElement.querySelector("[data-node-id]"));
     }
     return undefined;
 };

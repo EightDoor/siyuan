@@ -137,6 +137,9 @@ const getSnippetJS = () => {
 /// #if !BROWSER
 const renderPDF = async (id: string) => {
     const localData = window.siyuan.storage[Constants.LOCAL_EXPORTPDF];
+    if (typeof localData.paged === "undefined") {
+        localData.paged = true;
+    }
     const servePathWithoutTrailingSlash = window.location.protocol + "//" + window.location.host;
     const servePath = servePathWithoutTrailingSlash + "/";
     const isDefault = (window.siyuan.config.appearance.mode === 1 && window.siyuan.config.appearance.themeDark === "midnight") || (window.siyuan.config.appearance.mode === 0 && window.siyuan.config.appearance.themeLight === "daylight");
@@ -333,6 +336,13 @@ const renderPDF = async (id: string) => {
             </div>
             <span class="fn__hr"></span>
             <input id="watermark" class="b3-switch" type="checkbox" ${localData.watermark ? "checked" : ""}>
+        </label>
+        <label class="b3-label">
+            <div>
+                ${window.siyuan.languages.paged}
+            </div>
+            <span class="fn__hr"></span>
+            <input id="paged" class="b3-switch" type="checkbox" ${localData.paged ? "checked" : ""}>
         </label>
     </div>
     <div class="fn__flex" style="padding: 0 16px">
@@ -555,7 +565,7 @@ ${getIconScript(servePath)}
                 renderPreview(response2.data);
             })
         };
-        
+
         actionElement.querySelector("#scale").addEventListener("input", () => {
             const scale = actionElement.querySelector("#scale").value;
             actionElement.querySelector("#scaleTip").innerText = scale;
@@ -585,38 +595,70 @@ ${getIconScript(servePath)}
         actionElement.querySelector("#marginsLeft").addEventListener('change', () => {
             setPadding();
         });
-        actionElement.querySelector("#landscape").addEventListener('change', () => {
+        actionElement.querySelector("#landscape").addEventListener('change', (e) => {
             setPadding();
         });
         actionElement.querySelector('.b3-button--cancel').addEventListener('click', () => {
             const {ipcRenderer}  = require("electron");
             ipcRenderer.send("${Constants.SIYUAN_CMD}", "destroy")
         });
+        const buildExportConfig = (unPagedPageSize) => {
+            const pageSize = actionElement.querySelector("#pageSize").value;
+            // https://www.electronjs.org/docs/latest/api/web-contents#contentsprinttopdfoptions
+            // https://chromedevtools.github.io/devtools-protocol/tot/Page/#method-printToPDF
+            return {
+                title: "${window.siyuan.languages.export} PDF",
+                pdfOptions: {
+                    printBackground: true,
+                    landscape: actionElement.querySelector("#landscape").checked,
+                    marginType: actionElement.querySelector("#marginsType").value,
+                    margins: {
+                        top: parseFloat(document.querySelector("#marginsTop").value) || 0,
+                        bottom: parseFloat(document.querySelector("#marginsBottom").value) || 0,
+                        left: parseFloat(document.querySelector("#marginsLeft").value) || 0,
+                        right: parseFloat(document.querySelector("#marginsRight").value) || 0,
+                    },
+                    scale: parseFloat(actionElement.querySelector("#scale").value),
+                    pageSize: unPagedPageSize || pageSize,
+                },
+                pageSize,
+                keepFold: keepFoldElement.checked,
+                mergeSubdocs: mergeSubdocsElement.checked,
+                watermark: watermarkElement.checked,
+                removeAssets: actionElement.querySelector("#removeAssets").checked,
+                paged: !unPagedPageSize,
+                rootId: "${id}",
+                rootTitle: response.data.name,
+                parentWindowId: ${currentWindowId},
+            };
+        };
         actionElement.querySelector('.b3-button--text').addEventListener('click', () => {
             const {ipcRenderer}  = require("electron");
-            ipcRenderer.send("${Constants.SIYUAN_EXPORT_PDF}", {
-              title: "${window.siyuan.languages.export} PDF",
-              pdfOptions:{
-                printBackground: true,
-                landscape: actionElement.querySelector("#landscape").checked,
-                marginType: actionElement.querySelector("#marginsType").value,
-                margins: {
-                  top: parseFloat(document.querySelector("#marginsTop").value),
-                  bottom: parseFloat(document.querySelector("#marginsBottom").value),
-                  left: parseFloat(document.querySelector("#marginsLeft").value),
-                  right: parseFloat(document.querySelector("#marginsRight").value),
-                },
-                scale:  parseFloat(actionElement.querySelector("#scale").value),
-                pageSize: actionElement.querySelector("#pageSize").value,
-              },
-              keepFold: keepFoldElement.checked,
-              mergeSubdocs: mergeSubdocsElement.checked,
-              watermark: watermarkElement.checked,
-              removeAssets: actionElement.querySelector("#removeAssets").checked,
-              rootId: "${id}",
-              rootTitle: response.data.name,
-              parentWindowId: ${currentWindowId},
-            })
+            const isPaged = actionElement.querySelector("#paged").checked;
+            if (!isPaged) {
+                const getPageSizeDimensions = () => {
+                    // https://github.com/electron/electron/blob/3df3a6a736b93e0d69fa3b0c403b33f201287780/lib/browser/api/web-contents.ts#L89-L101
+                    const pageSizes = {
+                        "A3": { width: 11.7, height: 16.54 },
+                        "A4": { width: 8.27, height: 11.7 },
+                        "A5": { width: 5.83, height: 8.27 },
+                        "Legal": { width: 8.5, height: 14 },
+                        "Letter": { width: 8.5, height: 11 },
+                        "Tabloid": { width: 11, height: 17 },
+                    };
+                    return pageSizes[actionElement.querySelector("#pageSize").value];
+                };
+                const previewHeight = previewElement.scrollHeight / 96 - (parseFloat(document.querySelector("#marginsTop").value) || 0) - (parseFloat(document.querySelector("#marginsBottom").value) || 0);
+                ipcRenderer.send("${Constants.SIYUAN_EXPORT_PDF}", buildExportConfig(actionElement.querySelector("#landscape").checked ? {
+                    height: getPageSizeDimensions().height,
+                    width: previewHeight,
+                } : {
+                    width: getPageSizeDimensions().width,
+                    height: previewHeight,
+                }));
+            } else {
+                ipcRenderer.send("${Constants.SIYUAN_EXPORT_PDF}", buildExportConfig());
+            }
             previewElement.classList.add("exporting");
             previewElement.style.zoom = "";
             previewElement.style.paddingTop = "6px";
