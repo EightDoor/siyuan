@@ -736,6 +736,22 @@ func setDownloadInstallPkg(c *gin.Context) {
 	model.Conf.Save()
 }
 
+func setCustomRepo(c *gin.Context) {
+	ret := gulu.Ret.NewResult()
+	defer c.JSON(http.StatusOK, ret)
+
+	arg, ok := util.JsonArg(c, ret)
+	if !ok {
+		return
+	}
+
+	repoOwner := arg["repoOwner"].(string)
+	repoName := arg["repoName"].(string)
+	model.Conf.System.CustomRepoOwner = repoOwner
+	model.Conf.System.CustomRepoName = repoName
+	model.Conf.Save()
+}
+
 func setNetworkProxy(c *gin.Context) {
 	ret := gulu.Ret.NewResult()
 	defer c.JSON(http.StatusOK, ret)

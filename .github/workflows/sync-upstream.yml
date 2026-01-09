@@ -1,0 +1,174 @@
+name: Sync Upstream
+
+on:
+  schedule:
+    # 每7天北京时间 9:00 (UTC 1:00) 检查更新
+    - cron: '0 1 * * 0'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    name: Sync Upstream Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream https://github.com/siyuan-note/siyuan.git
+          git fetch upstream
+
+      - name: Check for updates
+        id: check_updates
+        run: |
+          echo "Checking for updates from upstream..."
+          UPSTREAM_LATEST=$(git rev-parse upstream/master)
+          CURRENT=$(git rev-parse origin/master)
+
+          if [ "$UPSTREAM_LATEST" = "$CURRENT" ]; then
+            echo "✅ Already up to date"
+            echo "needs_sync=false" >> $GITHUB_OUTPUT
+          else
+            echo "🔄 New commits found"
+            echo "needs_sync=true" >> $GITHUB_OUTPUT
+            echo "upstream_latest=$UPSTREAM_LATEST" >> $GITHUB_OUTPUT
+            echo "current=$CURRENT" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Merge upstream changes
+        id: merge
+        if: steps.check_updates.outputs.needs_sync == 'true'
+        run: |
+          echo "Attempting to merge upstream/master into master..."
+          if git merge upstream/master -m "Merge upstream/master at $(date +'%Y-%m-%d %H:%M:%S UTC')" --no-edit; then
+            echo "✅ Merge successful"
+            echo "merge_success=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Merge conflict detected"
+            echo "merge_success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Push changes
+        if: steps.merge.outputs.merge_success == 'true'
+        run: |
+          git push origin master
+
+      - name: Get latest upstream tag
+        if: steps.merge.outputs.merge_success == 'true'
+        id: get_tag
+        run: |
+          # 获取最新的 upstream tag
+          LATEST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n1)
+          echo "Latest upstream tag: $LATEST_TAG"
+          echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
+
+          # 检查该 tag 是否已存在于远程仓库
+          echo "Checking if tag exists in remote..."
+          if git ls-remote --tags origin | grep -q "refs/tags/$LATEST_TAG$"; then
+            echo "⚠️  Tag $LATEST_TAG already exists in remote, skipping..."
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Tag $LATEST_TAG does not exist in remote, will push..."
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push new tag to origin
+        if: steps.get_tag.outputs.tag_exists == 'false'
+        run: |
+          LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
+          echo "Fetching tag $LATEST_TAG from upstream..."
+          git fetch upstream tag "$LATEST_TAG" --no-tags
+
+          echo "Creating local tag $LATEST_TAG..."
+          git tag "$LATEST_TAG" "$LATEST_TAG^{}"
+
+          echo "Pushing tag $LATEST_TAG to origin..."
+          git push origin "$LATEST_TAG"
+
+          echo "✅ Tag $LATEST_TAG pushed successfully"
+
+      - name: Send email notification on success
+        if: steps.merge.outputs.merge_success == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.qq.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "✅ SiYuan 代码同步成功 - $(date +'%Y-%m-%d %H:%M')"
+          to: 851708184@qq.com
+          from: SiYuan Sync Bot
+          body: |
+            代码已成功从上游同步！
+
+            时间: $(date +'%Y-%m-%d %H:%M:%S UTC')
+            仓库: EightDoor/siyuan
+            动作: 合并上游 master 分支
+
+            Tag 状态:
+            ${{ steps.get_tag.outputs.tag_exists == 'true' && format('最新 tag {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('✅ 最新 tag {0} 已成功推送', steps.get_tag.outputs.latest_tag) }}
+
+            查看详情: https://github.com/EightDoor/siyuan/commits/master
+
+            ---
+            此邮件由 GitHub Actions 自动发送
+
+      - name: Send email notification on conflict
+        if: failure() && steps.merge.outputs.merge_success == 'false'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.qq.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "❌ SiYuan 代码同步冲突 - $(date +'%Y-%m-%d %H:%M')"
+          to: 851708184@qq.com
+          from: SiYuan Sync Bot
+          body: |
+            ⚠️ 代码同步时检测到冲突，需要手动处理！
+
+            时间: $(date +'%Y-%m-%d %H:%M:%S UTC')
+            仓库: EightDoor/siyuan
+            问题: 合并上游 master 分支时发生冲突
+
+            请尽快手动解决冲突：
+            1. git fetch upstream
+            2. git merge upstream/master
+            3. 解决冲突
+            4. git push origin master
+
+            查看详情: https://github.com/EightDoor/siyuan/actions
+
+            ---
+            此邮件由 GitHub Actions 自动发送
+
+      - name: Send email notification on error
+        if: failure() && steps.merge.outputs.merge_success != 'false'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.qq.com
+          server_port: 465
+          username: ${{ secrets.EMAIL_USERNAME }}
+          password: ${{ secrets.EMAIL_PASSWORD }}
+          subject: "⚠️ SiYuan 代码同步失败 - $(date +'%Y-%m-%d %H:%M')"
+          to: 851708184@qq.com
+          from: SiYuan Sync Bot
+          body: |
+            代码同步过程中出现错误！
+
+            时间: $(date +'%Y-%m-%d %H:%M:%S UTC')
+            仓库: EightDoor/siyuan
+
+            请检查日志: https://github.com/EightDoor/siyuan/actions
+
+            ---
+            此邮件由 GitHub Actions 自动发送

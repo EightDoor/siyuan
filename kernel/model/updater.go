@@ -114,16 +114,53 @@ func checkDownloadInstallPkg() {
 
 func getUpdatePkg() (downloadPkgURLs []string, checksum string, err error) {
 	defer logging.Recover()
-	result, err := util.GetRhyResult(false)
+
+	// 从自定义仓库获取更新信息（默认为 EightDoor/siyuan）
+	repoOwner := Conf.System.CustomRepoOwner
+	repoName := Conf.System.CustomRepoName
+
+	// 如果没有配置，使用默认值
+	if "" == repoOwner {
+		repoOwner = "EightDoor"
+	}
+	if "" == repoName {
+		repoName = "siyuan"
+	}
+
+	// 使用GitHub API获取最新release
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/releases/latest", repoOwner, repoName)
+	client := req.C().SetTLSHandshakeTimeout(7 * time.Second).SetTimeout(30 * time.Second)
+	resp, err := client.R().Get(apiURL)
 	if err != nil {
+		logging.LogErrorf("get custom repo release failed: %s", err)
 		return
 	}
 
-	ver := result["ver"].(string)
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("get custom repo release failed, status code: %d", resp.StatusCode)
+		logging.LogErrorf(err.Error())
+		return
+	}
+
+	var releaseData map[string]interface{}
+	if err = resp.UnmarshalJson(&releaseData); err != nil {
+		logging.LogErrorf("parse custom repo release failed: %s", err)
+		return
+	}
+
+	tagName, ok := releaseData["tag_name"].(string)
+	if !ok || tagName == "" {
+		err = fmt.Errorf("invalid release data")
+		return
+	}
+
+	// 去掉v前缀
+	ver := strings.TrimPrefix(tagName, "v")
 	if isVersionUpToDate(ver) {
 		return
 	}
 
+	// 构建包名
 	var suffix string
 	if gulu.OS.IsWindows() {
 		if "arm64" == runtime.GOARCH {
@@ -140,37 +177,62 @@ func getUpdatePkg() (downloadPkgURLs []string, checksum string, err error) {
 	}
 	pkg := "siyuan-" + ver + "-" + suffix
 
-	b3logURL := "https://release.b3log.org/siyuan/" + pkg
-	liuyunURL := "https://release.liuyun.io/siyuan/" + pkg
-	githubURL := "https://github.com/siyuan-note/siyuan/releases/download/v" + ver + "/" + pkg
-	ghproxyURL := "https://ghfast.top/" + githubURL
-	if util.IsChinaCloud() {
-		downloadPkgURLs = append(downloadPkgURLs, b3logURL)
-		downloadPkgURLs = append(downloadPkgURLs, liuyunURL)
-		downloadPkgURLs = append(downloadPkgURLs, ghproxyURL)
-		downloadPkgURLs = append(downloadPkgURLs, githubURL)
-	} else {
-		downloadPkgURLs = append(downloadPkgURLs, b3logURL)
-		downloadPkgURLs = append(downloadPkgURLs, liuyunURL)
-		downloadPkgURLs = append(downloadPkgURLs, githubURL)
-		downloadPkgURLs = append(downloadPkgURLs, ghproxyURL)
+	// 从GitHub API获取assets
+	assets, ok := releaseData["assets"].([]interface{})
+	if !ok {
+		err = fmt.Errorf("no assets found in release")
+		return
 	}
 
-	checksums := result["checksums"].(map[string]interface{})
-	checksum = checksums[pkg].(string)
+	// 查找匹配的asset
+	found := false
+	for _, asset := range assets {
+		assetMap, ok := asset.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		name, ok := assetMap["name"].(string)
+		if !ok {
+			continue
+		}
+		if name == pkg {
+			browserDownloadURL, ok := assetMap["browser_download_url"].(string)
+			if !ok {
+				continue
+			}
+			downloadPkgURLs = append(downloadPkgURLs, browserDownloadURL)
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		err = fmt.Errorf("package %s not found in release assets", pkg)
+		logging.LogErrorf(err.Error())
+		return
+	}
+
+	// 自定义仓库没有checksum，所以不验证
+	checksum = ""
 	return
 }
 
 func downloadInstallPkg(pkgURL, checksum string) (err error) {
-	if "" == pkgURL || "" == checksum {
+	if "" == pkgURL {
 		return
 	}
 
 	pkg := path.Base(pkgURL)
 	savePath := filepath.Join(util.TempDir, "install", pkg)
 	if gulu.File.IsExist(savePath) {
-		localChecksum, _ := sha256Hash(savePath)
-		if localChecksum == checksum {
+		// 如果有checksum，则验证
+		if "" != checksum {
+			localChecksum, _ := sha256Hash(savePath)
+			if localChecksum == checksum {
+				return
+			}
+		} else {
+			// 没有checksum（自定义仓库），文件已存在则跳过
 			return
 		}
 	}
@@ -194,10 +256,13 @@ func downloadInstallPkg(pkgURL, checksum string) (err error) {
 		return
 	}
 
-	localChecksum, _ := sha256Hash(savePath)
-	if checksum != localChecksum {
-		logging.LogErrorf("verify checksum failed, download install package [%s] checksum [%s] not equal to downloaded [%s] checksum [%s]", pkgURL, checksum, savePath, localChecksum)
-		return
+	// 如果有checksum，则验证
+	if "" != checksum {
+		localChecksum, _ := sha256Hash(savePath)
+		if checksum != localChecksum {
+			logging.LogErrorf("verify checksum failed, download install package [%s] checksum [%s] not equal to downloaded [%s] checksum [%s]", pkgURL, checksum, savePath, localChecksum)
+			return
+		}
 	}
 	logging.LogInfof("downloaded install package [%s] to [%s]", pkgURL, savePath)
 	util.PushStatusBar(Conf.Language(62))

@@ -56,6 +56,16 @@ export const about = {
     <div class="fn__space"></div>
     <input class="b3-switch fn__flex-center" id="downloadInstallPkg" type="checkbox"${window.siyuan.config.system.downloadInstallPkg ? " checked" : ""}>
 </label>
+<div class="b3-label config__item${isBrowser() || window.siyuan.config.system.isMicrosoftStore ? " fn__none" : ""}">
+    <div class="fn__flex-1">
+        更新仓库
+        <div class="b3-label__text">当前从 <b>${window.siyuan.config.system.customRepoOwner || "EightDoor"}/${window.siyuan.config.system.customRepoName || "siyuan"}</b> 检查更新</div>
+    </div>
+    <div class="fn__space"></div>
+    <button class="fn__flex-center b3-button b3-button--outline fn__size200" id="customRepo">
+        <svg><use xlink:href="#iconSettings"></use></svg>配置
+    </button>
+</div>
 <label class="b3-label fn__flex">
     <div class="fn__flex-1">
         ${window.siyuan.languages.about11}
@@ -388,6 +398,60 @@ ${checkUpdateHTML}
                 window.siyuan.config.system.downloadInstallPkg = downloadInstallPkgElement.checked;
             });
         });
+
+        // 自定义更新仓库配置
+        const customRepoElement = about.element.querySelector("#customRepo");
+        if (customRepoElement) {
+            customRepoElement.addEventListener("click", () => {
+                const customRepoDialog = new Dialog({
+                    title: "配置更新仓库",
+                    content: `<div class="b3-dialog__content">
+    <div class="b3-label__text">配置后将从指定的 GitHub 仓库检查更新</div>
+    <div class="fn__hr"></div>
+    <label class="fn__flex b3-label">
+        <div class="fn__flex-1">仓库 Owner</div>
+        <div class="fn__space"></div>
+        <input id="repoOwner" class="b3-text-field fn__flex-center fn__size200" value="${window.siyuan.config.system.customRepoOwner || "EightDoor"}" placeholder="例如：EightDoor">
+    </label>
+    <label class="fn__flex b3-label">
+        <div class="fn__flex-1">仓库名称</div>
+        <div class="fn__space"></div>
+        <input id="repoName" class="b3-text-field fn__flex-center fn__size200" value="${window.siyuan.config.system.customRepoName || "siyuan"}" placeholder="例如：siyuan">
+    </label>
+    <div class="b3-label__text ft__on-surface">修改配置后点击"保存"生效</div>
+</div>
+<div class="b3-dialog__action">
+    <button class="b3-button b3-button--cancel">取消</button><div class="fn__space"></div>
+    <button class="b3-button b3-button--text">保存</button>
+</div>`,
+                    width: "520px",
+                });
+                customRepoDialog.element.setAttribute("data-key", Constants.DIALOG_CUSTOMREPO);
+                const repoOwnerElement = customRepoDialog.element.querySelector("#repoOwner") as HTMLInputElement;
+                const repoNameElement = customRepoDialog.element.querySelector("#repoName") as HTMLInputElement;
+                const btnsElement = customRepoDialog.element.querySelectorAll(".b3-button");
+                btnsElement[0].addEventListener("click", () => {
+                    customRepoDialog.destroy();
+                });
+                btnsElement[1].addEventListener("click", () => {
+                    const repoOwner = repoOwnerElement.value.trim();
+                    const repoName = repoNameElement.value.trim();
+                    if (!repoOwner || !repoName) {
+                        showMessage("请输入完整的仓库信息");
+                        return;
+                    }
+                    fetchPost("/api/system/setCustomRepo", {repoOwner, repoName}, () => {
+                        window.siyuan.config.system.customRepoOwner = repoOwner;
+                        window.siyuan.config.system.customRepoName = repoName;
+                        showMessage(`更新仓库已设置为：${repoOwner}/${repoName}`);
+                        customRepoDialog.destroy();
+                        // 刷新页面以更新显示
+                        window.location.reload();
+                    });
+                });
+            });
+        }
+
         /// #if !BROWSER
         const autoLaunchElement = about.element.querySelector("#autoLaunch") as HTMLInputElement;
         autoLaunchElement.addEventListener("change", () => {

@@ -46,6 +46,9 @@ type System struct {
 	DisabledFeatures []string `json:"disabledFeatures"`
 
 	MicrosoftDefenderExcluded bool `json:"microsoftDefenderExcluded"` // 是否已加入 Microsoft Defender 排除项 https://github.com/siyuan-note/siyuan/issues/13650
+
+	CustomRepoOwner string `json:"customRepoOwner"` // 自定义GitHub仓库owner，用于检查更新
+	CustomRepoName  string `json:"customRepoName"`  // 自定义GitHub仓库名称，用于检查更新
 }
 
 func NewSystem() *System {
@@ -54,7 +57,7 @@ func NewSystem() *System {
 		Name:               util.GetDeviceName(),
 		KernelVersion:      util.Ver,
 		NetworkProxy:       &NetworkProxy{},
-		DownloadInstallPkg: true,
+		DownloadInstallPkg: false,
 	}
 }
 
