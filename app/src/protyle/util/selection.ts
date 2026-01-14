@@ -3,6 +3,7 @@ import {
     getNextBlock,
     getPreviousBlock,
     hasPreviousSibling,
+    isContainerBlock,
     isNotEditBlock
 } from "../wysiwyg/getBlock";
 import {hasClosestBlock, hasClosestByAttribute, hasClosestByTag} from "./hasClosest";
@@ -671,6 +672,9 @@ export const focusBlock = (element: Element, parentElement?: HTMLElement, toStar
         });
     }
     if (cursorElement) {
+        if (cursorElement.getAttribute("contenteditable") === "false") {
+            return false;
+        }
         if (cursorElement.tagName === "TABLE") {
             if (toStart) {
                 cursorElement = cursorElement.querySelector("th, td");
@@ -722,7 +726,7 @@ export const focusBlock = (element: Element, parentElement?: HTMLElement, toStar
         parentElement.focus();
     } else {
         // li 下面为 hr、嵌入块、数学公式、iframe、音频、视频、图表渲染块等时递归处理
-        if (element.classList.contains("li")) {
+        if (isContainerBlock(element)) {
             return focusBlock(element.querySelector("[data-node-id]"), parentElement, toStart);
         }
     }
