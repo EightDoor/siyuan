@@ -93,20 +93,42 @@ jobs:
             echo "is_stable_release=true" >> $GITHUB_OUTPUT
           fi
 
+      - name: Check if release exists
+        if: steps.get_tag.outputs.tag_exists == 'false' && steps.get_tag.outputs.latest_tag != 'none'
+        id: check_release
+        run: |
+          LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
+          echo "Checking if release exists for tag $LATEST_TAG..."
+
+          # 使用 GitHub API 检查 release 是否存在
+          RELEASE_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$LATEST_TAG")
+
+          if echo "$RELEASE_RESPONSE" | grep -q '"tag_name"'; then
+            echo "⚠️  Release for tag $LATEST_TAG already exists, skipping..."
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Release for tag $LATEST_TAG does not exist, will create..."
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Push new tag to origin
-        if: steps.get_tag.outputs.tag_exists == 'false'
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
           LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
           echo "Fetching tag $LATEST_TAG from upstream..."
           git fetch upstream tag "$LATEST_TAG" --no-tags
 
+          echo "Deleting local tag $LATEST_TAG if exists..."
+          git tag -d "$LATEST_TAG" 2>/dev/null || true
+
           echo "Creating local tag $LATEST_TAG..."
-          git tag "$LATEST_TAG" "$LATEST_TAG^{}"
+          git tag -f "$LATEST_TAG" "$LATEST_TAG^{}"
 
           echo "Pushing tag $LATEST_TAG to origin..."
           git push origin "$LATEST_TAG"
 
-          echo "✅ Tag $LATEST_TAG pushed successfully"
+          echo "✅ Tag $LATEST_TAG pushed successfully, this will trigger the build workflow"
 
       - name: Get current time
         id: time
@@ -132,7 +154,7 @@ jobs:
             动作: 合并上游 master 分支
 
             Tag 状态:
-            ${{ steps.get_tag.outputs.latest_tag == 'none' && '未检测到正式版本 tag' || steps.get_tag.outputs.tag_exists == 'true' && format('最新正式版本 {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('🎉 正式版本 {0} 已推送，将触发构建', steps.get_tag.outputs.latest_tag) }}
+            ${{ steps.get_tag.outputs.latest_tag == 'none' && '未检测到正式版本 tag' || steps.check_release.outputs.release_exists == 'true' && format('正式版本 {0} 的 Release 已存在，跳过构建', steps.get_tag.outputs.latest_tag) || steps.get_tag.outputs.tag_exists == 'true' && format('最新正式版本 {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('🎉 正式版本 {0} 已推送，将触发构建', steps.get_tag.outputs.latest_tag) }}
 
             查看详情: https://github.com/EightDoor/siyuan/commits/master
 
