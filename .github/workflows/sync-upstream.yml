@@ -66,9 +66,19 @@ jobs:
         if: steps.merge.outputs.merge_success == 'true'
         id: get_tag
         run: |
-          # 获取最新的 upstream tag
-          LATEST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n1)
-          echo "Latest upstream tag: $LATEST_TAG"
+          # 获取最新的上游正式版本 tag（排除 -dev, -beta, -rc 等后缀）
+          LATEST_TAG=$(git tag -l "v*" --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
+
+          # 如果没有找到正式版本，则跳过后续处理
+          if [ -z "$LATEST_TAG" ]; then
+            echo "ℹ️  No stable release tag found, skipping tag sync..."
+            echo "latest_tag=none" >> $GITHUB_OUTPUT
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "is_stable_release=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Latest upstream stable tag: $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
 
           # 检查该 tag 是否已存在于远程仓库
@@ -76,9 +86,11 @@ jobs:
           if git ls-remote --tags origin | grep -q "refs/tags/$LATEST_TAG$"; then
             echo "⚠️  Tag $LATEST_TAG already exists in remote, skipping..."
             echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "is_stable_release=false" >> $GITHUB_OUTPUT
           else
             echo "✅ Tag $LATEST_TAG does not exist in remote, will push..."
             echo "tag_exists=false" >> $GITHUB_OUTPUT
+            echo "is_stable_release=true" >> $GITHUB_OUTPUT
           fi
 
       - name: Push new tag to origin
@@ -120,7 +132,7 @@ jobs:
             动作: 合并上游 master 分支
 
             Tag 状态:
-            ${{ steps.get_tag.outputs.tag_exists == 'true' && format('最新 tag {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('✅ 最新 tag {0} 已成功推送', steps.get_tag.outputs.latest_tag) }}
+            ${{ steps.get_tag.outputs.latest_tag == 'none' && '未检测到正式版本 tag' || steps.get_tag.outputs.tag_exists == 'true' && format('最新正式版本 {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('🎉 正式版本 {0} 已推送，将触发构建', steps.get_tag.outputs.latest_tag) }}
 
             查看详情: https://github.com/EightDoor/siyuan/commits/master
 
