@@ -77,7 +77,8 @@ jobs:
       - name: Push changes
         if: steps.merge.outputs.merge_success == 'true'
         run: |
-          git push origin master
+          # 使用 PAT 进行认证，以确保有 workflow 权限
+          git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" master
 
       - name: Get latest upstream tag
         if: steps.merge.outputs.merge_success == 'true'
@@ -147,7 +148,8 @@ jobs:
           git tag -f "$LATEST_TAG" "$UPSTREAM_COMMIT"
 
           echo "Pushing tag $LATEST_TAG to origin..."
-          git push origin "$LATEST_TAG"
+          # 直接使用 PAT 进行认证，以确保有 workflow 权限
+          git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" "$LATEST_TAG"
 
           echo "✅ Tag $LATEST_TAG pushed successfully, this will trigger the build workflow"
 
