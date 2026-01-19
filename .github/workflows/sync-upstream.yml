@@ -116,14 +116,18 @@ jobs:
         if: steps.check_release.outputs.release_exists == 'false'
         run: |
           LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
-          echo "Fetching tag $LATEST_TAG from upstream..."
-          git fetch upstream tag "$LATEST_TAG" --no-tags
+          echo "Checking tag $LATEST_TAG from upstream..."
+
+          # 前面已经 git fetch upstream，标签已在本地
+          # 直接使用上游标签指向的 commit 创建本地标签
+          UPSTREAM_COMMIT=$(git rev-parse refs/tags/$LATEST_TAG)
+          echo "Upstream tag $LATEST_TAG points to commit: $UPSTREAM_COMMIT"
 
           echo "Deleting local tag $LATEST_TAG if exists..."
           git tag -d "$LATEST_TAG" 2>/dev/null || true
 
-          echo "Creating local tag $LATEST_TAG..."
-          git tag -f "$LATEST_TAG" "$LATEST_TAG^{}"
+          echo "Creating local tag $LATEST_TAG at commit $UPSTREAM_COMMIT..."
+          git tag -f "$LATEST_TAG" "$UPSTREAM_COMMIT"
 
           echo "Pushing tag $LATEST_TAG to origin..."
           git push origin "$LATEST_TAG"
