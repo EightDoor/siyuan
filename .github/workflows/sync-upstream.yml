@@ -25,19 +25,18 @@ jobs:
           git config --global user.email 'actions@github.com'
 
       - name: Configure Git with PAT
-        if: secrets.GH_PAT != ''
         run: |
-          echo "✅ GH_PAT secret is set, configuring origin URL..."
-          git remote set-url origin "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git"
-          echo "Origin URL configured"
-          git remote -v
-
-      - name: PAT not configured warning
-        if: secrets.GH_PAT == ''
-        run: |
-          echo "⚠️  WARNING: GH_PAT secret is not set!"
-          echo "Please create a Personal Access Token and add it as GH_PAT secret."
-          echo "Visit: https://github.com/EightDoor/siyuan/settings/secrets/actions"
+          if [ -n "${{ secrets.GH_PAT }}" ]; then
+            echo "✅ GH_PAT secret is set, configuring origin URL..."
+            git remote set-url origin "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git"
+            echo "Origin URL configured:"
+            git remote -v
+          else
+            echo "⚠️  WARNING: GH_PAT secret is not set!"
+            echo "Please create a Personal Access Token and add it as GH_PAT secret."
+            echo "Visit: https://github.com/EightDoor/siyuan/settings/secrets/actions"
+            echo "Continuing without PAT (will fail if pushing workflow files)..."
+          fi
 
       - name: Add upstream remote
         run: |
