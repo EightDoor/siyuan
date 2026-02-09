@@ -71,9 +71,20 @@ jobs:
         run: |
           echo "Fetching upstream version..."
           
+          # 获取所有上游tags并显示前20个（用于调试）
+          echo ""
+          echo "=== Latest upstream tags ==="
+          git ls-remote --tags upstream | head -20
+          echo ""
+          
           # 从上游获取最新的正式版本tag
+          # 过滤规则：
+          # 1. 只匹配 v 开头的tag
+          # 2. 版本格式为 x.y.z（如 v3.5.4）
+          # 3. 排除开发版本（-dev, -beta, -rc, -alpha, -pre 等后缀）
           UPSTREAM_TAG=$(git ls-remote --tags upstream | \
             grep -E 'refs/tags/v[0-9]+\.[0-9]+\.[0-9]+$' | \
+            grep -v -E '(dev|beta|rc|alpha|pre|snapshot)' | \
             awk '{print $2}' | \
             sed 's|refs/tags/||' | \
             sort -V | \
@@ -86,13 +97,15 @@ jobs:
             exit 0
           fi
           
-          echo "Latest upstream stable tag: $UPSTREAM_TAG"
+          echo ""
+          echo "✅ Found latest upstream stable tag: $UPSTREAM_TAG"
           echo "latest_tag=$UPSTREAM_TAG" >> $GITHUB_OUTPUT
           echo "is_stable_release=true" >> $GITHUB_OUTPUT
           
           # 提取版本号（去掉 v 前缀）
           VERSION="${UPSTREAM_TAG#v}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo ""
           
           # 生成私有tag名称
           PRIVATE_TAG="release-$VERSION"
