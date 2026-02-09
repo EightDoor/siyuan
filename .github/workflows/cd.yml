@@ -24,18 +24,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
-      release_version: ${{ steps.release_info.outputs.release_version }}
+      release_version: ${{ steps.version.outputs.value }}
       version: ${{ steps.version.outputs.value }}
       packageManager: ${{ steps.packageManager.outputs.value }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install PyGithub
 
       - name: Extract version from private tag
         id: version
@@ -43,31 +37,26 @@ jobs:
           TAG="${{ github.ref }}"
           echo "Processing tag: $TAG"
 
-          # 从私有tag提取版本号（release-v3.5.1 → 3.5.1）
           if [[ "$TAG" == refs/tags/release-v* ]]; then
             VERSION="${TAG#refs/tags/release-v}"
             echo "✅ Extracted version from private tag: $VERSION"
             echo "value=$VERSION" >> $GITHUB_OUTPUT
           elif [ -n "${{ inputs.version }}" ]; then
-            # 手动触发时使用输入的版本号
             VERSION="${{ inputs.version }}"
             echo "Using manually provided version: $VERSION"
             echo "value=$VERSION" >> $GITHUB_OUTPUT
           else
             echo "❌ Error: Cannot determine version"
             echo "Tag: $TAG"
-            echo "Manual input: ${{ inputs.version }}"
             exit 1
           fi
 
-          # 验证版本号格式
           if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "❌ Error: Invalid version format: $VERSION"
-            echo "Version should be in format: x.y.z (e.g., 3.5.1)"
             exit 1
           fi
 
-          echo "Version validation passed: $VERSION"
+          echo "Version: $VERSION"
 
       - name: Extract electronVersion from package.json
         uses: sergeysova/jq-action@v2
@@ -92,78 +81,29 @@ jobs:
           if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
             echo "⚠️  Warning: Version mismatch!"
             echo "Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
-            echo "This may indicate package.json was not updated by upstream."
           else
             echo "✅ Version matches package.json"
           fi
 
-      - name: Generate Release Information
-        id: release_info
+      - name: Generate Release Body
+        id: generate_body
         run: |
           VERSION="${{ steps.version.outputs.value }}"
           CURRENT_HEAD=$(git rev-parse HEAD)
 
-          echo "Generating release information for version $VERSION..."
+          echo "Generating release body for version $VERSION..."
           echo "Current commit: $CURRENT_HEAD"
 
-          # 获取上一个私有tag
           LAST_PRIVATE_TAG=$(git tag -l "release-v*" --sort=-version:refname | grep -E '^release-v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
 
-          # 生成 changelog 文件
           if [ -n "$LAST_PRIVATE_TAG" ]; then
             echo "Found last private tag: $LAST_PRIVATE_TAG"
-            echo ""
-            echo "Generating changelog from $LAST_PRIVATE_TAG to HEAD..."
-
-            # 写入changelog到文件
             git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'- %s (%h)' | head -50 > /tmp/changelog.txt
             git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'%h - %s (%an, %ar)' | head -200 > /tmp/full_changelog.txt
           else
-            echo "No previous private tag found, showing recent commits..."
+            echo "No previous private tag found"
             git log --pretty=format:'- %s (%h)' -20 > /tmp/changelog.txt
-            echo "This release includes latest upstream changes." > /tmp/full_changelog.txt
           fi
-
-          echo "release_title=SiYuan $VERSION" >> $GITHUB_OUTPUT
-          echo "release_version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Create Release Body
-        id: create_body
-        run: |
-          VERSION="${{ steps.version.outputs.value }}"
-          CURRENT_HEAD=$(git rev-parse HEAD)
-          LAST_PRIVATE_TAG=$(git tag -l "release-v*" --sort=-version:refname | grep -E '^release-v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
-
-          # 生成changelog内容
-          if [ -n "$LAST_PRIVATE_TAG" ]; then
-            CHANGELOG="## 📦 What's New in v$VERSION\n\n"
-            CHANGELOG="$CHANGELOG$(cat /tmp/changelog.txt)\n\n"
-            CHANGELOG="$CHANGELOG---\n\n"
-            CHANGELOG="$CHANGELOG**Full Changelog**\n\n"
-            CHANGELOG="$CHANGELOG$(cat /tmp/full_changelog.txt)"
-          else
-            CHANGELOG="## 📦 What's New in v$VERSION\n\n"
-            CHANGELOG="$CHANGELOGThis is the initial release of this version based on upstream tag.\n\n"
-            CHANGELOG="$CHANGELOG**Recent Changes**\n\n"
-            CHANGELOG="$CHANGELOG$(cat /tmp/changelog.txt)"
-          fi
-
-          # 添加构建信息
-          BUILD_INFO="\n\n---\n\n**Build Information**\n"
-          BUILD_INFO="$BUILD_INFO- Version: v$VERSION\n"
-          BUILD_INFO="$BUILD_INFO- Source: Based on siyuan-note/siyuan v$VERSION\n"
-          BUILD_INFO="$BUILD_INFO- Commit: $CURRENT_HEAD\n"
-          BUILD_INFO="$BUILD_INFO- Repository: EightDoor/siyuan\n"
-          BUILD_INFO="$BUILD_INFO- Build Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')\n"
-          BUILD_INFO="$BUILD_INFO- Private Tag: release-v$VERSION"
-
-          RELEASE_BODY="$CHANGELOG$BUILD_INFO"
-          echo "$RELEASE_BODY"
-
-          # 写入环境变量
-          echo "release_body<<RELEASE_EOF" >> $GITHUB_ENV
-          echo "$RELEASE_BODY" >> $GITHUB_ENV
-          echo "RELEASE_EOF" >> $GITHUB_ENV
 
       - name: Create Release
         id: create_release
@@ -171,7 +111,27 @@ jobs:
         with:
           name: ${{ steps.version.outputs.value }}
           tag: ${{ github.ref }}
-          body: ${{ env.release_body }}
+          body: |
+            ## 📦 What's New in v${{ steps.version.outputs.value }}
+
+            $(cat /tmp/changelog.txt)
+
+            ---
+
+            **Full Changelog**
+
+            $(cat /tmp/full_changelog.txt)
+
+            ---
+
+            **Build Information**
+
+            - **Version:** v${{ steps.version.outputs.value }}
+            - **Source:** Based on siyuan-note/siyuan v${{ steps.version.outputs.value }}
+            - **Commit:** ${{ steps.generate_body.outputs.CURRENT_HEAD }}
+            - **Repository:** EightDoor/siyuan
+            - **Build Date:** ${{ steps.generate_body.outputs.CURRENT_DATE }}
+            - **Private Tag:** release-v${{ steps.version.outputs.value }}
           draft: false
           prerelease: true
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -205,7 +165,7 @@ jobs:
             name: macos build mac.dmg
             kernel_path: "../app/kernel-darwin/SiYuan-Kernel"
             build_args_prefix: "-s -w -X"
-            build_args_suffix: "Mode=prod"
+            build_args_suffix: "Yuan-Kernel"
             electron_args: "dist-darwin"
             goos: "darwin"
             goarch: "amd64"
@@ -266,49 +226,55 @@ jobs:
 
       - name: Install Node pnpm
         run: npm install -g ${{ needs.create_release.outputs.packageManager }}
-        working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app
+        working-directory: $ {{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app
 
       - name: Install Node Dependencies
         run: pnpm install
-        working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app
+        working-directory: ${{ github.workspace }}/go/src/github.com${{ env.repo_owner }}/${{ env.repo_name }}/app
 
       - name: Building UI
         run: pnpm run build
-        working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app
+        working-directory: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app
 
       - name: Remove Build Directory
         uses: JesseTG/rm@v1.0.2
         with:
-          path: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/build
+          path: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app/build
 
       - name: Remove Kernel Directory for Linux
         uses: JesseTG/rm@v1.0.2
         with:
-          path: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/kernel-linux
+          path: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app/kernel-linux
 
       - name: Remove Kernel Directory for Windows
         uses: JesseTG/rm@v1.0.2
         with:
-          path: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/kernel
+          path: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app/kernel
 
       - name: Remove Kernel Directory for macOS
         uses: JesseTG/rm@v1.0.2
         with:
-          path: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/kernel-darwin
+          path: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app/kernel-darwin
 
       - name: Remove Kernel Directory for macOS ARM64
         uses: JesseTG/rm@v1.0.2
         with:
-          path: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/kernel-darwin-arm64
+          path: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app/kernel-darwin-arm64
 
       - name: Generate Icon Resource and Properties/Version Info For Windows
         run: ${{ github.workspace }}\go\${{ matrix.config.gobin }}\goversioninfo -platform-specific=true -icon="resource\icon.ico" -manifest="resource\goversioninfo.exe.manifest"
         if: "contains( matrix.config.goos, 'windows')"
-        working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/kernel
+        working-directory: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/kernel
+        env:
+          GO111MODULE: on
+          CGO_ENABLED: 1
+          GOOS: ${{ matrix.config.goos }}
+          GOPATH: ${{ github.workspace }}/go
+          GOARCH: ${{ matrix.config.goarch }}
 
       - name: Building Kernel
-        run: go build --tags fts5 -o "${{ matrix.config.kernel_path }}" -v -ldflags "${{ matrix.config.build_args_prefix }} github.com/${{ env.repo_owner }}/${{ env.repo_name }}/kernel/util.${{ matrix.config.build_args_suffix }}"
-        working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/kernel
+        run: go build --tags fts5 -o "${{ matrix.config.kernel_path }}" -v -ldflags "${{ matrix.config.build_args_prefix }} github.com/${ { env.repo_owner }}/${ { env.repo_name }}/kernel/util.${{ matrix.config.build_args_suffix }}"
+        working-directory: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/kernel
         env:
           GO111MODULE: on
           CGO_ENABLED: 1
@@ -318,7 +284,7 @@ jobs:
 
       - name: Building Electron App
         run: pnpm run ${{ matrix.config.electron_args }}
-        working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app
+        working-directory: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app
 
       - name: Upload Release
         uses: actions/upload-release-asset@v1
@@ -326,6 +292,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_name: siyuan-${{ needs.create_release.outputs.release_version }}-${{ matrix.config.suffix }}
-          asset_path: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/build/siyuan-${{ needs.create_release.outputs.version }}-${{ matrix.config.suffix }}
+          asset_name: siyuan-${{ needs.create_release.outputs.release_version }}-${ { matrix.config.suffix }}
+          asset_path: ${{ github.workspace }}/go/src/github.com/${ { env.repo_owner }}/${ { env.repo_name }}/app/build/siyuan-${{ needs.create_release.outputs.version }}-${ { matrix.config.suffix }}
           asset_content_type: application/octet-stream
