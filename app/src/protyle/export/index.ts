@@ -509,6 +509,7 @@ ${getIconScript(servePath)}
           config: {
             appearance: { mode: 0, codeBlockThemeDark: "${window.siyuan.config.appearance.codeBlockThemeDark}", codeBlockThemeLight: "${window.siyuan.config.appearance.codeBlockThemeLight}" },
             editor: { 
+              allowSVGScriptTip: ${window.siyuan.config.editor.allowSVGScript},
               allowHTMLBLockScript: ${window.siyuan.config.editor.allowHTMLBLockScript},
               fontSize: ${window.siyuan.config.editor.fontSize},
               codeLineWrap: true,
@@ -734,8 +735,8 @@ const getExportPath = (option: IExportOptions, removeAssets?: boolean, mergeSubd
             }, exportResponse => {
                 if (option.type === "word") {
                     if (exportResponse.code === 1) {
-                        showMessage(exportResponse.msg, undefined, "error");
                         hideMessage(msgId);
+                        showMessage(exportResponse.msg, 0, "error");
                         return;
                     }
                     afterExport(exportResponse.data.path, msgId);

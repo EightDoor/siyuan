@@ -126,6 +126,53 @@ const hotKey2Electron = (key) => {
     return electronKey + key.replace("⌘", "").replace("⇧", "").replace("⌥", "").replace("⌃", "");
 };
 
+/**
+ * 将 RFC 5646 格式的语言标签解析为应用支持的语言代码
+ * https://www.rfc-editor.org/info/rfc5646
+ * @param {string[]} languageTags - 语言标签数组（如 ["zh-Hans-CN", "en-US"]）
+ * @returns {string} 应用支持的语言代码
+ */
+const resolveAppLanguage = (languageTags) => {
+    if (!languageTags || languageTags.length === 0) {
+        return "en_US";
+    }
+
+    const tag = languageTags[0].toLowerCase();
+    const parts = tag.replace(/_/g, "-").split("-");
+    const language = parts[0];
+
+    if (language === "zh") {
+        if (tag.includes("hant")) {
+            return "zh_CHT";
+        }
+        if (tag.includes("hans") || tag.includes("cn") || tag.includes("sg")) {
+            return "zh_CN";
+        }
+        if (tag.includes("tw") || tag.includes("hk") || tag.includes("mo")) {
+            return "zh_CHT";
+        }
+        return "zh_CN";
+    }
+
+    const languageMapping = {
+        "en": "en_US",
+        "ar": "ar_SA",
+        "de": "de_DE",
+        "es": "es_ES",
+        "fr": "fr_FR",
+        "he": "he_IL",
+        "it": "it_IT",
+        "ja": "ja_JP",
+        "ko": "ko_KR",
+        "pl": "pl_PL",
+        "pt": "pt_BR",
+        "ru": "ru_RU",
+        "tr": "tr_TR"
+    };
+
+    return languageMapping[language] || "en_US";
+};
+
 const exitApp = (port, errorWindowId) => {
     let tray;
     let mainWindow;
@@ -582,7 +629,7 @@ const initKernel = (workspace, port, lang) => {
                     let errorWindowId;
                     switch (code) {
                         case 20:
-                            errorWindowId = showErrorWindow("数据库被锁定", "The database is locked", "<div>数据库文件正在被其他进程占用，请检查是否同时存在多个内核进程（SiYuan Kernel）服务相同的工作空间。</div><div>The database file is being occupied by other processes, please check whether there are multiple kernel processes (SiYuan Kernel) serving the same workspace at the same time.</div>");
+                            errorWindowId = showErrorWindow("数据库不可用", "The database is unavailable", "<div>无法访问数据库文件，请查看 工作空间/temp/siyuan.log 获取详细报错信息</div><div>Cannot access the database file. Please check workspace/temp/siyuan.log for detailed error information.</div>");
                             break;
                         case 21:
                             errorWindowId = showErrorWindow("监听端口 " + currentKernelPort + " 失败", "Failed to listen to port " + currentKernelPort, "<div>监听 " + currentKernelPort + " 端口失败，请确保程序拥有网络权限并不受防火墙和杀毒软件阻止。</div><div>Failed to listen to port " + currentKernelPort + ", please make sure the program has network permissions and is not blocked by firewalls and antivirus software.</div>");
@@ -1272,8 +1319,11 @@ app.whenReady().then(() => {
         const firstOpenWindow = new BrowserWindow({
             width: Math.floor(screen.getPrimaryDisplay().size.width * 0.6),
             height: Math.floor(screen.getPrimaryDisplay().workAreaSize.height * 0.8),
-            frame: false,
+            frame: "darwin" === process.platform,
+            titleBarStyle: "hidden",
+            fullscreenable: false,
             icon: path.join(appDir, "stage", "icon-large.png"),
+            transparent: "darwin" === process.platform,
             webPreferences: {
                 nodeIntegration: true, webviewTag: true, webSecurity: false, contextIsolation: false,
             },
@@ -1284,8 +1334,8 @@ app.whenReady().then(() => {
         }
 
         // 改进桌面端初始化时使用的外观语言 https://github.com/siyuan-note/siyuan/issues/6803
-        let languages = app.getPreferredSystemLanguages();
-        let language = languages && 0 < languages.length && "zh-Hans-CN" === languages[0] ? "zh_CN" : "en_US";
+        const languages = app.getPreferredSystemLanguages();
+        const language = resolveAppLanguage(languages);
         firstOpenWindow.loadFile(initHTMLPath, {
             query: {
                 lang: language,

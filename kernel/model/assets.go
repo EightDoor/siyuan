@@ -51,6 +51,24 @@ import (
 	"github.com/siyuan-note/siyuan/kernel/util"
 )
 
+func GetAssetImgSize(assetPath string) (width, height int) {
+	absPath, err := GetAssetAbsPath(assetPath)
+	if err != nil {
+		logging.LogErrorf("get asset [%s] abs path failed: %s", assetPath, err)
+		return
+	}
+
+	img, err := imaging.Open(absPath)
+	if err != nil {
+		logging.LogErrorf("open asset image [%s] failed: %s", absPath, err)
+		return
+	}
+
+	width = img.Bounds().Dx()
+	height = img.Bounds().Dy()
+	return
+}
+
 func GetAssetPathByHash(hash string) string {
 	assetHash := cache.GetAssetHash(hash)
 	if nil == assetHash {
@@ -230,7 +248,18 @@ func netAssets2LocalAssets0(tree *parse.Tree, onlyImg bool, originalURL string, 
 					u = u[:strings.Index(u, "?")]
 				}
 
-				if !gulu.File.IsExist(u) || gulu.File.IsDir(u) {
+				if !gulu.File.IsExist(u) {
+					logging.LogErrorf("local file asset [%s] not exist", u)
+					continue
+				}
+
+				if gulu.File.IsDir(u) {
+					logging.LogWarnf("ignore converting directory path [%s] to local asset", u)
+					continue
+				}
+
+				if util.IsSensitivePath(u) {
+					logging.LogWarnf("ignore converting sensitive path [%s] to local asset", u)
 					continue
 				}
 
@@ -641,9 +670,11 @@ func uploadAssets2Cloud(assetPaths []string, bizType string, ignorePushMsg bool)
 			continue
 		}
 
-		msg := fmt.Sprintf(Conf.Language(27), html.EscapeString(absAsset))
-		util.PushStatusBar(msg)
-		util.PushUpdateMsg(msgId, msg, 3000)
+		if !ignorePushMsg {
+			msg := fmt.Sprintf(Conf.Language(27), html.EscapeString(absAsset))
+			util.PushStatusBar(msg)
+			util.PushUpdateMsg(msgId, msg, 3000)
+		}
 
 		requestResult := gulu.Ret.NewResult()
 		request := httpclient.NewCloudFileRequest2m()
@@ -1350,6 +1381,23 @@ func getAssetsLinkDests(node *ast.Node, includeServePath bool) (ret []string) {
 			ret[i] = dest + "/"
 		}
 	}
+	return
+}
+
+func getAssetsLinkDestsInTree(tree *parse.Tree, includeServePath bool) (nodes []*ast.Node) {
+	ast.Walk(tree.Root, func(n *ast.Node, entering bool) ast.WalkStatus {
+		if !entering {
+			return ast.WalkContinue
+		}
+
+		dests := getAssetsLinkDests(n, includeServePath)
+		if 1 > len(dests) {
+			return ast.WalkContinue
+		}
+
+		nodes = append(nodes, n)
+		return ast.WalkContinue
+	})
 	return
 }
 

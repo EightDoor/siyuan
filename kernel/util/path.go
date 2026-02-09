@@ -19,7 +19,6 @@ package util
 import (
 	"bytes"
 	"io/fs"
-	"net"
 	"os"
 	"path"
 	"path/filepath"
@@ -65,85 +64,20 @@ func ShortPathForBootingDisplay(p string) string {
 
 var LocalIPs []string
 
-func GetLocalIPs() (ret []string) {
-	if ContainerAndroid == Container || ContainerHarmony == Container {
-		// Android 上用不了 net.InterfaceAddrs() https://github.com/golang/go/issues/40569，所以前面使用启动内核传入的参数 localIPs
-		LocalIPs = append(LocalIPs, LocalHost)
-		LocalIPs = gulu.Str.RemoveDuplicatedElem(LocalIPs)
-		return LocalIPs
-	}
-
-	ret = []string{}
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		logging.LogWarnf("get interface addresses failed: %s", err)
-		return
-	}
-
-	IPv4Nets := []*net.IPNet{}
-	IPv6Nets := []*net.IPNet{}
-	for _, addr := range addrs {
-		if networkIp, ok := addr.(*net.IPNet); ok && networkIp.IP.String() != "<nil>" {
-			if networkIp.IP.To4() != nil {
-				IPv4Nets = append(IPv4Nets, networkIp)
-			} else if networkIp.IP.To16() != nil {
-				IPv6Nets = append(IPv6Nets, networkIp)
-			}
-		}
-	}
-
-	// loopback address
-	for _, net := range IPv4Nets {
-		if net.IP.IsLoopback() {
-			ret = append(ret, net.IP.String())
-		}
-	}
-	// private address
-	for _, net := range IPv4Nets {
-		if net.IP.IsPrivate() {
-			ret = append(ret, net.IP.String())
-		}
-	}
-	// IPv4 private address
-	for _, net := range IPv4Nets {
-		if net.IP.IsGlobalUnicast() {
-			ret = append(ret, net.IP.String())
-		}
-	}
-	// link-local unicast address
-	for _, net := range IPv4Nets {
-		if net.IP.IsLinkLocalUnicast() {
-			ret = append(ret, net.IP.String())
-		}
-	}
-
-	// loopback address
-	for _, net := range IPv6Nets {
-		if net.IP.IsLoopback() {
-			ret = append(ret, "["+net.IP.String()+"]")
-		}
-	}
-	// private address
-	for _, net := range IPv6Nets {
-		if net.IP.IsPrivate() {
-			ret = append(ret, "["+net.IP.String()+"]")
-		}
-	}
-	// IPv6 private address
-	for _, net := range IPv6Nets {
-		if net.IP.IsGlobalUnicast() {
-			ret = append(ret, "["+net.IP.String()+"]")
-		}
-	}
-	// link-local unicast address
-	for _, net := range IPv6Nets {
-		if net.IP.IsLinkLocalUnicast() {
-			ret = append(ret, "["+net.IP.String()+"]")
-		}
+func GetServerAddrs() (ret []string) {
+	if ContainerAndroid != Container && ContainerHarmony != Container {
+		ret = GetPrivateIPv4s()
+	} else {
+		// Android/鸿蒙上用不了 net.InterfaceAddrs() https://github.com/golang/go/issues/40569，所以前面使用启动内核传入的参数 localIPs
+		ret = LocalIPs
 	}
 
 	ret = append(ret, LocalHost)
 	ret = gulu.Str.RemoveDuplicatedElem(ret)
+
+	for i, _ := range ret {
+		ret[i] = "http://" + ret[i] + ":" + ServerPort
+	}
 	return
 }
 
@@ -412,4 +346,97 @@ func IsPartitionRootPath(path string) bool {
 		// On Unix-like systems, the root path is "/"
 		return cleanPath == "/"
 	}
+}
+
+// IsSensitivePath 对传入路径做统一的敏感性检测。
+func IsSensitivePath(p string) bool {
+	if p == "" {
+		return false
+	}
+	pp := filepath.Clean(strings.ToLower(p))
+
+	// 精确敏感文件
+	exact := []string{
+		"/etc/passwd",
+		"/etc/shadow",
+		"/etc/gshadow",
+		"/var/run/secrets/kubernetes.io/serviceaccount/token",
+	}
+	for _, e := range exact {
+		if pp == e {
+			return true
+		}
+	}
+
+	// 敏感目录前缀（UNIX 风格）
+	prefixes := []string{
+		"/etc/ssh",
+		"/root",
+		"/etc/ssl",
+		"/etc/letsencrypt",
+		"/var/lib/docker",
+		"/.gnupg",
+		"/.ssh",
+		"/.aws",
+		"/.kube",
+		"/.docker",
+		"/.config/gcloud",
+	}
+	for _, pre := range prefixes {
+		if strings.HasPrefix(pp, pre) {
+			return true
+		}
+	}
+
+	// Windows 常见敏感目录（小写比较）
+	winPrefixes := []string{
+		`c:\windows\system32`,
+		`c:\windows\system`,
+		`c:\users\`,
+	}
+	for _, wp := range winPrefixes {
+		if strings.HasPrefix(pp, strings.ToLower(wp)) {
+			return true
+		}
+	}
+
+	// 文件名级别检查
+	base := filepath.Base(pp)
+	n := strings.ToLower(base)
+	sensitiveNames := map[string]struct{}{
+		".env":            {},
+		".env.local":      {},
+		".npmrc":          {},
+		".netrc":          {},
+		"id_rsa":          {},
+		"id_dsa":          {},
+		"id_ecdsa":        {},
+		"id_ed25519":      {},
+		"authorized_keys": {},
+		"passwd":          {},
+		"shadow":          {},
+		"pgpass":          {},
+		"hosts":           {},
+		"credentials":     {}, // 如 aws credentials
+		"config.json":     {}, // docker config.json 可能含 token
+	}
+	if _, ok := sensitiveNames[n]; ok {
+		return true
+	}
+	// 支持 .env.* 之类的模式
+	if n == ".env" || strings.HasPrefix(n, ".env.") {
+		return true
+	}
+
+	// 扩展名级别检查
+	ext := strings.ToLower(filepath.Ext(n))
+	sensitiveExts := []string{
+		".pem", ".key", ".p12", ".pfx", ".ppk", ".asc", ".gpg",
+	}
+	for _, se := range sensitiveExts {
+		if ext == se {
+			return true
+		}
+	}
+	return false
 }

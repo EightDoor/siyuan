@@ -16,6 +16,7 @@ import {cellScrollIntoView, getCellText} from "../render/av/cell";
 import {getCalloutInfo, getContenteditableElement} from "../wysiwyg/getBlock";
 import {clearBlockElement} from "./clear";
 import {removeZWJ} from "./normalizeText";
+import {base64ToURL} from "../../util/image";
 
 export const getTextStar = (blockElement: HTMLElement, contentOnly = false) => {
     const dataType = blockElement.dataset.type;
@@ -175,8 +176,14 @@ export const pasteAsPlainText = async (protyle: IProtyle) => {
         // 删掉 <span data-type\="text".*>text</span> 标签，只保留文本
         textPlain = textPlain.replace(/<span data-type="text".*?>(.*?)<\/span>/g, "$1");
 
+        // 对 <<assets/...>> 进行内部转义 https://github.com/siyuan-note/siyuan/issues/11992
+        textPlain = textPlain.replace(/<<assets\//g, "__@lt2assets/@__").replace(/>>/g, "__@gt2@__");
+
         // 对 HTML 标签进行内部转义，避免被 Lute 解析以后变为小写 https://github.com/siyuan-note/siyuan/issues/10620
         textPlain = textPlain.replace(/</g, ";;;lt;;;").replace(/>/g, ";;;gt;;;");
+
+        // 反转义 <<assets/...>>
+        textPlain = textPlain.replace(/__@lt2assets\/@__/g, "<<assets/").replace(/__@gt2@__/g, ">>");
 
         // 反转义内置需要解析的 HTML 标签
         textPlain = textPlain.replace(/__@sub@__/g, "<sub>").replace(/__@\/sub@__/g, "</sub>");
@@ -354,7 +361,7 @@ export const paste = async (protyle: IProtyle, event: (ClipboardEvent | DragEven
         }
         return;
     }
-    protyle.hint.enableExtend = Constants.BLOCK_HINT_KEYS.includes(protyle.hint.splitChar);
+    protyle.hint.enableExtend = Constants.BLOCK_HINT_KEYS.concat("{{", "/", "#", "、", "「「", "「『", "『「", "『『",).includes(protyle.hint.splitChar);
     hideElements(protyle.hint.enableExtend ? ["select"] : ["select", "hint"], protyle);
     protyle.wysiwyg.element.querySelectorAll(".protyle-wysiwyg--hl").forEach(item => {
         item.classList.remove("protyle-wysiwyg--hl");
@@ -587,7 +594,25 @@ export const paste = async (protyle: IProtyle, event: (ClipboardEvent | DragEven
                     }
                 }
             }
-            const textPlainDom = protyle.lute.Md2BlockDOM(textPlain);
+            let textPlainDom = protyle.lute.Md2BlockDOM(textPlain);
+            if (textPlainDom && textPlainDom.indexOf("data:image/") > -1) {
+                const tempElement = document.createElement("template");
+                tempElement.innerHTML = textPlainDom;
+                const imgSrcList: string[] = [];
+                const imageElements = tempElement.content.querySelectorAll("img");
+                imageElements.forEach((item) => {
+                    if (item.getAttribute("data-src").startsWith("data:image/")) {
+                        imgSrcList.push(item.getAttribute("data-src"));
+                    }
+                });
+                const base64SrcList = await base64ToURL(imgSrcList);
+                base64SrcList.forEach((item, index) => {
+                    imageElements[index].setAttribute("src", item);
+                    imageElements[index].setAttribute("data-src", item);
+                    imageElements[index].parentElement.querySelector(".img__net")?.remove();
+                });
+                textPlainDom = tempElement.innerHTML;
+            }
             insertHTML(textPlainDom, protyle, false, false, true);
         }
         blockRender(protyle, protyle.wysiwyg.element);
