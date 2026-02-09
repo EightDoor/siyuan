@@ -198,7 +198,7 @@ jobs:
             name: macos build mac.dmg
             kernel_path: "../app/kernel-darwin/SiYuan-Kernel"
             build_args_prefix: "-s -w -X"
-            build_args_suffix: "Yuan-Kernel"
+            build_args_suffix: "Mode=prod"
             electron_args: "dist-darwin"
             goos: "darwin"
             goarch: "amd64"
