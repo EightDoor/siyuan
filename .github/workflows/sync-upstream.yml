@@ -107,8 +107,8 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo ""
           
-          # 生成私有tag名称
-          PRIVATE_TAG="release-$VERSION"
+          # 生成私有tag名称（注意：必须与 cd.yml 的触发条件匹配）
+          PRIVATE_TAG="release-v$VERSION"
           echo "private_tag=$PRIVATE_TAG" >> $GITHUB_OUTPUT
           echo "Private tag will be: $PRIVATE_TAG"
 
