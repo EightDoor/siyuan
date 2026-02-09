@@ -86,42 +86,63 @@ jobs:
         run: |
           # 获取最新的上游正式版本 tag（排除 -dev, -beta, -rc 等后缀）
           LATEST_TAG=$(git tag -l "v*" --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n1)
-
+          
           # 如果没有找到正式版本，则跳过后续处理
           if [ -z "$LATEST_TAG" ]; then
             echo "ℹ️  No stable release tag found, skipping tag sync..."
             echo "latest_tag=none" >> $GITHUB_OUTPUT
             echo "tag_exists=true" >> $GITHUB_OUTPUT
+            echo "tag_needs_update=false" >> $GITHUB_OUTPUT
             echo "is_stable_release=false" >> $GITHUB_OUTPUT
             exit 0
           fi
-
+          
           echo "Latest upstream stable tag: $LATEST_TAG"
           echo "latest_tag=$LATEST_TAG" >> $GITHUB_OUTPUT
-
+          echo "is_stable_release=true" >> $GITHUB_OUTPUT
+          
           # 检查该 tag 是否已存在于远程仓库
           echo "Checking if tag exists in remote..."
           if git ls-remote --tags origin | grep -q "refs/tags/$LATEST_TAG$"; then
-            echo "⚠️  Tag $LATEST_TAG already exists in remote, skipping..."
+            echo "✅ Tag $LATEST_TAG exists in remote"
             echo "tag_exists=true" >> $GITHUB_OUTPUT
-            echo "is_stable_release=false" >> $GITHUB_OUTPUT
+            
+            # 获取远程 tag 指向的 commit
+            REMOTE_TAG_COMMIT=$(git ls-remote --tags origin | grep "refs/tags/$LATEST_TAG$" | awk '{print $1}')
+            echo "Remote tag $LATEST_TAG points to commit: $REMOTE_TAG_COMMIT"
+            
+            # 获取当前 HEAD commit
+            CURRENT_HEAD=$(git rev-parse HEAD)
+            echo "Current HEAD commit: $CURRENT_HEAD"
+            
+            # 检查 tag 是否指向当前 HEAD
+            if [ "$REMOTE_TAG_COMMIT" = "$CURRENT_HEAD" ]; then
+              echo "✅ Tag $LATEST_TAG already points to current HEAD"
+              echo "tag_needs_update=false" >> $GITHUB_OUTPUT
+              echo "tag_points_to_head=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️  Tag $LATEST_TAG points to old commit ($REMOTE_TAG_COMMIT)"
+              echo "tag_needs_update=true" >> $GITHUB_OUTPUT
+              echo "tag_points_to_head=false" >> $GITHUB_OUTPUT
+            fi
           else
-            echo "✅ Tag $LATEST_TAG does not exist in remote, will push..."
+            echo "✅ Tag $LATEST_TAG does not exist in remote, will create..."
             echo "tag_exists=false" >> $GITHUB_OUTPUT
-            echo "is_stable_release=true" >> $GITHUB_OUTPUT
+            echo "tag_needs_update=false" >> $GITHUB_OUTPUT
+            echo "tag_points_to_head=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Check if release exists
-        if: steps.get_tag.outputs.tag_exists == 'false' && steps.get_tag.outputs.latest_tag != 'none'
+        if: steps.get_tag.outputs.latest_tag != 'none' && steps.get_tag.outputs.is_stable_release == 'true'
         id: check_release
         run: |
           LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
           echo "Checking if release exists for tag $LATEST_TAG..."
-
+          
           # 使用 GitHub API 检查 release 是否存在
           RELEASE_RESPONSE=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
             "https://api.github.com/repos/${{ github.repository }}/releases/tags/$LATEST_TAG")
-
+          
           if echo "$RELEASE_RESPONSE" | grep -q '"tag_name"'; then
             echo "⚠️  Release for tag $LATEST_TAG already exists, skipping..."
             echo "release_exists=true" >> $GITHUB_OUTPUT
@@ -130,36 +151,108 @@ jobs:
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Push new tag to origin
+      - name: Push or update tag to origin
         id: push_tag
         if: steps.check_release.outputs.release_exists == 'false'
         run: |
           LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
-          echo "Checking tag $LATEST_TAG from upstream..."
-
-          # 前面已经 git fetch upstream，标签已在本地
-          # 直接使用上游标签指向的 commit 创建本地标签
-          UPSTREAM_COMMIT=$(git rev-parse refs/tags/$LATEST_TAG)
-          echo "Upstream tag $LATEST_TAG points to commit: $UPSTREAM_COMMIT"
-
-          echo "Deleting local tag $LATEST_TAG if exists..."
-          git tag -d "$LATEST_TAG" 2>/dev/null || true
-
-          echo "Creating local tag $LATEST_TAG at commit $UPSTREAM_COMMIT..."
-          git tag -f "$LATEST_TAG" "$UPSTREAM_COMMIT"
-
-          echo "Pushing tag $LATEST_TAG to origin..."
-          # 使用 PAT 进行认证，以确保有 workflow 权限
-          if git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" "$LATEST_TAG"; then
-            echo "✅ Tag $LATEST_TAG pushed successfully, this will trigger the build workflow"
-            echo "tag_pushed=true" >> $GITHUB_OUTPUT
-          else
-            echo "⚠️  Failed to push tag $LATEST_TAG due to permission restrictions"
-            echo "tag_pushed=false" >> $GITHUB_OUTPUT
+          TAG_EXISTS="${{ steps.get_tag.outputs.tag_exists }}"
+          TAG_NEEDS_UPDATE="${{ steps.get_tag.outputs.tag_needs_update }}"
+          TAG_POINTS_TO_HEAD="${{ steps.get_tag.outputs.tag_points_to_head }}"
+          
+          echo "Processing tag $LATEST_TAG..."
+          echo "Tag exists: $TAG_EXISTS"
+          echo "Tag needs update: $TAG_NEEDS_UPDATE"
+          echo "Tag points to HEAD: $TAG_POINTS_TO_HEAD"
+          
+          # 情况 1：tag 不存在 → 创建并推送新 tag
+          if [ "$TAG_EXISTS" == "false" ]; then
             echo ""
-            echo "Manual push required:"
-            echo "  git push origin $LATEST_TAG"
-            exit 0
+            echo "=== Creating new tag $LATEST_TAG ==="
+            
+            # 前面已经 git fetch upstream，标签已在本地
+            # 直接使用上游标签指向的 commit 创建本地标签
+            UPSTREAM_COMMIT=$(git rev-parse refs/tags/$LATEST_TAG)
+            echo "Upstream tag $LATEST_TAG points to commit: $UPSTREAM_COMMIT"
+            
+            echo "Creating local tag $LATEST_TAG at commit $UPSTREAM_COMMIT..."
+            git tag -f "$LATEST_TAG" "$UPSTREAM_COMMIT"
+            
+            echo "Pushing tag $LATEST_TAG to origin..."
+            if git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" "$LATEST_TAG"; then
+              echo "✅ Tag $LATEST_TAG pushed successfully, this will trigger build workflow"
+              echo "tag_action=created" >> $GITHUB_OUTPUT
+              echo "tag_success=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️  Failed to push tag $LATEST_TAG due to permission restrictions"
+              echo "tag_success=false" >> $GITHUB_OUTPUT
+              echo "Manual push required: git push origin $LATEST_TAG"
+              exit 0
+            fi
+          
+          # 情况 2：tag 存在但指向旧 commit → 删除并重新创建
+          elif [ "$TAG_NEEDS_UPDATE" == "true" ]; then
+            echo ""
+            echo "=== Updating existing tag $LATEST_TAG ==="
+            
+            # 获取当前 HEAD commit
+            CURRENT_HEAD=$(git rev-parse HEAD)
+            echo "Current HEAD: $CURRENT_HEAD"
+            
+            # 删除本地 tag（如果存在）
+            echo "Deleting local tag $LATEST_TAG if exists..."
+            git tag -d "$LATEST_TAG" 2>/dev/null || true
+            
+            # 基于 HEAD 创建本地 tag
+            echo "Creating local tag $LATEST_TAG at HEAD ($CURRENT_HEAD)..."
+            git tag -f "$LATEST_TAG" "$CURRENT_HEAD"
+            
+            # 删除远程 tag
+            echo "Deleting remote tag $LATEST_TAG..."
+            if git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" --delete "refs/tags/$LATEST_TAG"; then
+              echo "✅ Remote tag $LATEST_TAG deleted"
+            else
+              echo "⚠️  Failed to delete remote tag, will try force push"
+            fi
+            
+            # 强制推送新 tag
+            echo "Force pushing tag $LATEST_TAG to origin..."
+            if git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" "$LATEST_TAG" --force; then
+              echo "✅ Tag $LATEST_TAG updated successfully, this will trigger build workflow"
+              echo "tag_action=updated" >> $GITHUB_OUTPUT
+              echo "tag_success=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️  Failed to update tag $LATEST_TAG due to permission restrictions"
+              echo "tag_success=false" >> $GITHUB_OUTPUT
+              echo "Manual update required:"
+              echo "  git tag -d $LATEST_TAG"
+              echo "  git tag $LATEST_TAG HEAD"
+              echo "  git push origin $LATEST_TAG --force"
+              exit 0
+            fi
+          
+          # 情况 3：tag 存在且指向 HEAD，但 release 不存在 → 强制推送触发构建
+          elif [ "$TAG_POINTS_TO_HEAD" == "true" ]; then
+            echo ""
+            echo "=== Tag $LATEST_TAG already points to HEAD, force push to trigger build ==="
+            
+            if git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" "$LATEST_TAG" --force; then
+              echo "✅ Tag $LATEST_TAG force pushed successfully, this will trigger build workflow"
+              echo "tag_action=forced" >> $GITHUB_OUTPUT
+              echo "tag_success=true" >> $GITHUB_OUTPUT
+            else
+              echo "⚠️  Failed to force push tag $LATEST_TAG due to permission restrictions"
+              echo "tag_success=false" >> $GITHUB_OUTPUT
+              echo "Manual force push required: git push origin $LATEST_TAG --force"
+              exit 0
+            fi
+          
+          # 情况 4：不应该到达这里
+          else
+            echo "❌ Unexpected tag state, skipping"
+            echo "tag_action=skipped" >> $GITHUB_OUTPUT
+            echo "tag_success=false" >> $GITHUB_OUTPUT
+            exit 1
           fi
 
       - name: Get current time
@@ -180,18 +273,32 @@ jobs:
           from: SiYuan Sync Bot
           body: |
             代码已成功从上游同步！
-
+            
             时间: ${{ steps.time.outputs.datetime }}
             仓库: EightDoor/siyuan
             动作: 合并上游 master 分支
-
+            
             Tag 状态:
-            ${{ steps.get_tag.outputs.latest_tag == 'none' && '未检测到正式版本 tag' || steps.check_release.outputs.release_exists == 'true' && format('正式版本 {0} 的 Release 已存在，跳过构建', steps.get_tag.outputs.latest_tag) || steps.get_tag.outputs.tag_exists == 'true' && format('最新正式版本 {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('正式版本 {0} 的推送状态: {1}', steps.get_tag.outputs.latest_tag, steps.push_tag.outputs.tag_pushed == 'true' && '✅ 已成功推送，将触发构建' || '⚠️ 需要手动推送') }}
-
-            ${{ steps.push_tag.outputs.tag_pushed != 'true' && format('⚠️ 需要手动推送 tag {0}: git push origin {0}', steps.get_tag.outputs.latest_tag) || '' }}
-
+            ${{ steps.get_tag.outputs.latest_tag == 'none' && '未检测到正式版本 tag' || steps.check_release.outputs.release_exists == 'true' && format('正式版本 {0} 的 Release 已存在，跳过构建', steps.get_tag.outputs.latest_tag) || format('正式版本 {0} 的处理结果:', steps.get_tag.outputs.latest_tag) }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_action == 'created' && format('🎉 已创建新 tag {0} 并推送，将触发构建', steps.get_tag.outputs.latest_tag) || '' }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_action == 'updated' && format('🔄 已更新 tag {0} 指向最新代码，将触发构建', steps.get_tag.outputs.latest_tag) || '' }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_action == 'forced' && format('✅ 已强制推送 tag {0} 触发构建', steps.get_tag.outputs.latest_tag) || '' }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_success == 'false' && format('⚠️ Tag {0} 操作失败，需要手动处理', steps.get_tag.outputs.latest_tag) || '' }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_success == 'false' && format('手动操作命令:', steps.get_tag.outputs.latest_tag) || '' }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_action == 'updated' && steps.push_tag.outputs.tag_success == 'false' && format('  git tag -d {0}', steps.get_tag.outputs.latest_tag) || '' }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_action == 'updated' && steps.push_tag.outputs.tag_success == 'false' && format('  git tag {0} HEAD', steps.get_tag.outputs.latest_tag) || '' }}
+            
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.push_tag.outputs.tag_success == 'false' && format('  git push origin {0} --force', steps.get_tag.outputs.latest_tag) || '' }}
+            
             查看详情: https://github.com/EightDoor/siyuan/commits/master
-
+            
             ---
             此邮件由 GitHub Actions 自动发送
 
