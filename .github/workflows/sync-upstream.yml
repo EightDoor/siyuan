@@ -131,6 +131,7 @@ jobs:
           fi
 
       - name: Push new tag to origin
+        id: push_tag
         if: steps.check_release.outputs.release_exists == 'false'
         run: |
           LATEST_TAG="${{ steps.get_tag.outputs.latest_tag }}"
@@ -148,10 +149,18 @@ jobs:
           git tag -f "$LATEST_TAG" "$UPSTREAM_COMMIT"
 
           echo "Pushing tag $LATEST_TAG to origin..."
-          # 直接使用 PAT 进行认证，以确保有 workflow 权限
-          git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" "$LATEST_TAG"
-
-          echo "✅ Tag $LATEST_TAG pushed successfully, this will trigger the build workflow"
+          # 使用 PAT 进行认证，以确保有 workflow 权限
+          if git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" "$LATEST_TAG"; then
+            echo "✅ Tag $LATEST_TAG pushed successfully, this will trigger the build workflow"
+            echo "tag_pushed=true" >> $GITHUB_OUTPUT
+          else
+            echo "⚠️  Failed to push tag $LATEST_TAG due to permission restrictions"
+            echo "tag_pushed=false" >> $GITHUB_OUTPUT
+            echo ""
+            echo "Manual push required:"
+            echo "  git push origin $LATEST_TAG"
+            exit 0
+          fi
 
       - name: Get current time
         id: time
@@ -177,7 +186,9 @@ jobs:
             动作: 合并上游 master 分支
 
             Tag 状态:
-            ${{ steps.get_tag.outputs.latest_tag == 'none' && '未检测到正式版本 tag' || steps.check_release.outputs.release_exists == 'true' && format('正式版本 {0} 的 Release 已存在，跳过构建', steps.get_tag.outputs.latest_tag) || steps.get_tag.outputs.tag_exists == 'true' && format('最新正式版本 {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('🎉 正式版本 {0} 已推送，将触发构建', steps.get_tag.outputs.latest_tag) }}
+            ${{ steps.get_tag.outputs.latest_tag == 'none' && '未检测到正式版本 tag' || steps.check_release.outputs.release_exists == 'true' && format('正式版本 {0} 的 Release 已存在，跳过构建', steps.get_tag.outputs.latest_tag) || steps.get_tag.outputs.tag_exists == 'true' && format('最新正式版本 {0} 已存在，跳过推送', steps.get_tag.outputs.latest_tag) || format('正式版本 {0} 的推送状态: {1}', steps.get_tag.outputs.latest_tag, steps.push_tag.outputs.tag_pushed == 'true' && '✅ 已成功推送，将触发构建' || '⚠️ 需要手动推送') }}
+
+            ${{ steps.push_tag.outputs.tag_pushed != 'true' && format('⚠️ 需要手动推送 tag {0}: git push origin {0}', steps.get_tag.outputs.latest_tag) || '' }}
 
             查看详情: https://github.com/EightDoor/siyuan/commits/master
 
