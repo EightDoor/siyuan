@@ -23,7 +23,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      upload_url: ${{ steps.set_upload_url.outputs.upload_url }}
       release_version: ${{ steps.version.outputs.value }}
       version: ${{ steps.version.outputs.value }}
       packageManager: ${{ steps.packageManager.outputs.value }}
@@ -85,8 +85,31 @@ jobs:
             echo "✅ Version matches package.json"
           fi
 
+      - name: Check if release exists
+        id: check_release
+        run: |
+          VERSION="${{ steps.version.outputs.value }}"
+          TAG_NAME="release-v${VERSION}"
+
+          echo "Checking if release for tag $TAG_NAME exists..."
+
+          RELEASES=$(curl -s -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            "https://api.github.com/repos/${{ github.repository }}/releases")
+
+          if echo "$RELEASES" | grep -q "\"tag_name\": \"$TAG_NAME\""; then
+            echo "⚠️  Release for tag $TAG_NAME already exists"
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+
+            UPLOAD_URL=$(echo "$RELEASES" | jq -r ".[] | select(.tag_name==\"$TAG_NAME\") | .upload_url")
+            echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Release does not exist, will create"
+            echo "release_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Generate Release Body
         id: generate_body
+        if: steps.check_release.outputs.release_exists == 'false'
         run: |
           VERSION="${{ steps.version.outputs.value }}"
           CURRENT_HEAD=$(git rev-parse HEAD)
@@ -107,10 +130,11 @@ jobs:
 
       - name: Create Release
         id: create_release
+        if: steps.check_release.outputs.release_exists == 'false'
         uses: ncipollo/release-action@v1
         with:
           name: ${{ steps.version.outputs.value }}
-          tag: ${{ github.ref }}
+          tag: release-v${{ steps.version.outputs.value }}
           body: |
             ## 📦 What's New in v${{ steps.version.outputs.value }}
 
@@ -135,6 +159,15 @@ jobs:
           draft: false
           prerelease: true
           token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set upload_url
+        id: set_upload_url
+        run: |
+          if [ "${{ steps.check_release.outputs.release_exists }}" == "true" ]; then
+            echo "upload_url=${{ steps.check_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
+          else
+            echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
+          fi
 
   build:
     runs-on: ${{ matrix.config.os }}
