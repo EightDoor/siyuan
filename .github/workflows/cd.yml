@@ -3,8 +3,13 @@ name: CD For SiYuan
 on:
   push:
     tags:
-      - 'v*'
+      - 'release-v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Override version (optional, e.g. 3.5.4)'
+        required: false
+        type: string
 
 # ref https://docs.github.com/zh/actions/learn-github-actions/variables
 env:
@@ -32,20 +37,37 @@ jobs:
           python-version: "3.11"
       - run: pip install PyGithub
 
-      - id: thisLatestRelease
-        uses: pozetroninc/github-action-get-latest-release@master
-        with:
-          # owner: siyuan-note
-          # repo: siyuan
-          repository: ${{ github.repository }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          excludes: prerelease, draft
-
-      - name: Extract version from package.json
-        uses: sergeysova/jq-action@v2
+      - name: Extract version from private tag
         id: version
-        with:
-          cmd: 'jq .version ${{ env.package_json }} -r'
+        run: |
+          TAG="${{ github.ref }}"
+          echo "Processing tag: $TAG"
+
+          # 从私有tag提取版本号（release-v3.5.1 → 3.5.1）
+          if [[ "$TAG" == refs/tags/release-v* ]]; then
+            VERSION="${TAG#refs/tags/release-v}"
+            echo "✅ Extracted version from private tag: $VERSION"
+            echo "value=$VERSION" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.version }}" ]; then
+            # 手动触发时使用输入的版本号
+            VERSION="${{ inputs.version }}"
+            echo "Using manually provided version: $VERSION"
+            echo "value=$VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Error: Cannot determine version"
+            echo "Tag: $TAG"
+            echo "Manual input: ${{ inputs.version }}"
+            exit 1
+          fi
+
+          # 验证版本号格式
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Error: Invalid version format: $VERSION"
+            echo "Version should be in format: x.y.z (e.g., 3.5.1)"
+            exit 1
+          fi
+
+          echo "Version validation passed: $VERSION"
 
       - name: Extract electronVersion from package.json
         uses: sergeysova/jq-action@v2
@@ -59,20 +81,89 @@ jobs:
         with:
           cmd: "jq .packageManager ${{ env.package_json }} -r"
 
-      - name: Gather Release Information
+      - name: Verify version matches package.json
+        run: |
+          TAG_VERSION="${{ steps.version.outputs.value }}"
+          PACKAGE_VERSION=$(jq -r .version ${{ env.package_json }})
+
+          echo "Tag version: $TAG_VERSION"
+          echo "Package.json version: $PACKAGE_VERSION"
+
+          if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "⚠️  Warning: Version mismatch!"
+            echo "Tag version ($TAG_VERSION) does not match package.json version ($PACKAGE_VERSION)"
+            echo "This may indicate package.json was not updated by upstream."
+          else
+            echo "✅ Version matches package.json"
+          fi
+
+      - name: Generate Release Information
         id: release_info
         run: |
-          echo "release_title=$(git show --format=%s --no-patch | head -1)" >> $GITHUB_OUTPUT
-          echo "release_version=v${{ steps.version.outputs.value }}" >> $GITHUB_OUTPUT
-          changelog_header=$(python scripts/parse-changelog-HEAD.py -t ${{ github.ref }} -b ${{ steps.thisLatestRelease.outputs.release }} -e ${{ steps.electronVersion.outputs.value }} ${{ env.repo_owner }}/${{ env.repo_name }})
-          changelog=$(python scripts/parse-changelog.py -t ${{ github.ref }} ${{ env.repo_owner }}/${{ env.repo_name }})
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "release_body<<$EOF" >> $GITHUB_ENV
-          echo "$changelog_header" >> $GITHUB_ENV
-          echo "$changelog" >> $GITHUB_ENV
-          echo "$EOF" >> $GITHUB_ENV
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION="${{ steps.version.outputs.value }}"
+          CURRENT_HEAD=$(git rev-parse HEAD)
+
+          echo "Generating release information for version $VERSION..."
+          echo "Current commit: $CURRENT_HEAD"
+
+          # 获取上一个私有tag
+          LAST_PRIVATE_TAG=$(git tag -l "release-v*" --sort=-version:refname | grep -E '^release-v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
+
+          # 生成 changelog 文件
+          if [ -n "$LAST_PRIVATE_TAG" ]; then
+            echo "Found last private tag: $LAST_PRIVATE_TAG"
+            echo ""
+            echo "Generating changelog from $LAST_PRIVATE_TAG to HEAD..."
+
+            # 写入changelog到文件
+            git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'- %s (%h)' | head -50 > /tmp/changelog.txt
+            git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'%h - %s (%an, %ar)' | head -200 > /tmp/full_changelog.txt
+          else
+            echo "No previous private tag found, showing recent commits..."
+            git log --pretty=format:'- %s (%h)' -20 > /tmp/changelog.txt
+            echo "This release includes latest upstream changes." > /tmp/full_changelog.txt
+          fi
+
+          echo "release_title=SiYuan $VERSION" >> $GITHUB_OUTPUT
+          echo "release_version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create Release Body
+        id: create_body
+        run: |
+          VERSION="${{ steps.version.outputs.value }}"
+          CURRENT_HEAD=$(git rev-parse HEAD)
+          LAST_PRIVATE_TAG=$(git tag -l "release-v*" --sort=-version:refname | grep -E '^release-v[0-9]+\.[0-9]+\.[0-9]+$' | sed -n '2p')
+
+          # 生成changelog内容
+          if [ -n "$LAST_PRIVATE_TAG" ]; then
+            CHANGELOG="## 📦 What's New in v$VERSION\n\n"
+            CHANGELOG="$CHANGELOG$(cat /tmp/changelog.txt)\n\n"
+            CHANGELOG="$CHANGELOG---\n\n"
+            CHANGELOG="$CHANGELOG**Full Changelog**\n\n"
+            CHANGELOG="$CHANGELOG$(cat /tmp/full_changelog.txt)"
+          else
+            CHANGELOG="## 📦 What's New in v$VERSION\n\n"
+            CHANGELOG="$CHANGELOGThis is the initial release of this version based on upstream tag.\n\n"
+            CHANGELOG="$CHANGELOG**Recent Changes**\n\n"
+            CHANGELOG="$CHANGELOG$(cat /tmp/changelog.txt)"
+          fi
+
+          # 添加构建信息
+          BUILD_INFO="\n\n---\n\n**Build Information**\n"
+          BUILD_INFO="$BUILD_INFO- Version: v$VERSION\n"
+          BUILD_INFO="$BUILD_INFO- Source: Based on siyuan-note/siyuan v$VERSION\n"
+          BUILD_INFO="$BUILD_INFO- Commit: $CURRENT_HEAD\n"
+          BUILD_INFO="$BUILD_INFO- Repository: EightDoor/siyuan\n"
+          BUILD_INFO="$BUILD_INFO- Build Date: $(date -u +'%Y-%m-%d %H:%M:%S UTC')\n"
+          BUILD_INFO="$BUILD_INFO- Private Tag: release-v$VERSION"
+
+          RELEASE_BODY="$CHANGELOG$BUILD_INFO"
+          echo "$RELEASE_BODY"
+
+          # 写入环境变量
+          echo "release_body<<RELEASE_EOF" >> $GITHUB_ENV
+          echo "$RELEASE_BODY" >> $GITHUB_ENV
+          echo "RELEASE_EOF" >> $GITHUB_ENV
 
       - name: Create Release
         id: create_release
