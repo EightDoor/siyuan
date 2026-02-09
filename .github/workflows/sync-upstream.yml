@@ -163,9 +163,9 @@ jobs:
           echo "Creating private tag $PRIVATE_TAG at HEAD..."
           git tag "$PRIVATE_TAG" "$CURRENT_HEAD"
           
-          # 推送私有tag
-          echo "Pushing private tag $PRIVATE_TAG to origin..."
-          if git push origin "$PRIVATE_TAG"; then
+          # 推送私有tag（使用 --force 强制推送）
+          echo "Force pushing private tag $PRIVATE_TAG to origin..."
+          if git push origin "$PRIVATE_TAG" --force; then
             echo "✅ Private tag $PRIVATE_TAG pushed successfully!"
             echo "CD workflow will be triggered shortly."
             echo "tag_success=true" >> $GITHUB_OUTPUT
@@ -175,7 +175,7 @@ jobs:
             echo ""
             echo "Manual push required:"
             echo "  git tag $PRIVATE_TAG HEAD"
-            echo "  git push origin $PRIVATE_TAG"
+            echo "  git push origin $PRIVATE_TAG --force"
             exit 0
           fi
 
@@ -218,7 +218,7 @@ jobs:
             
             ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.create_tag.outputs.tag_success == 'false' && format('  git tag {0} HEAD', steps.get_tag.outputs.private_tag) || '' }}
             
-            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.create_tag.outputs.tag_success == 'false' && format('  git push origin {0}', steps.get_tag.outputs.private_tag) || '' }}
+            ${{ steps.get_tag.outputs.latest_tag != 'none' && steps.check_release.outputs.release_exists == 'false' && steps.create_tag.outputs.tag_success == 'false' && format('  git push origin {0} --force', steps.get_tag.outputs.private_tag) || '' }}
             
             查看详情: https://github.com/EightDoor/siyuan/commits/master
             
