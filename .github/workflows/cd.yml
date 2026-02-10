@@ -346,11 +346,30 @@ jobs:
         shell: bash
 
       - name: Upload Release Asset
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: release-v${{ needs.create_release.outputs.version }}
-          files: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/build/siyuan-${{ needs.create_release.outputs.version }}-${{ matrix.config.suffix }}
-          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
+        run: |
+          VERSION="${{ needs.create_release.outputs.version }}"
+          BUILD_DIR="$GITHUB_WORKSPACE/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/build"
+          FILE_NAME="siyuan-$VERSION-${{ matrix.config.suffix }}"
+          FILE_PATH="$BUILD_DIR/$FILE_NAME"
+
+          echo "=== Debug Info ==="
+          echo "Version: $VERSION"
+          echo "Build directory: $BUILD_DIR"
+          echo "Expected file: $FILE_PATH"
+          echo ""
+
+          if [ -f "$FILE_PATH" ]; then
+            echo "✅ File found: $FILE_PATH"
+            ls -lh "$FILE_PATH"
+          else
+            echo "❌ File not found: $FILE_PATH"
+            echo ""
+            echo "=== Listing build directory ==="
+            ls -la "$BUILD_DIR" || echo "Build directory not found"
+            exit 1
+          fi
+
+          gh release upload "release-v$VERSION" "$FILE_PATH" --clobber
