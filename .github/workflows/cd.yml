@@ -333,6 +333,18 @@ jobs:
         run: pnpm run ${{ matrix.config.electron_args }}
         working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app
 
+      - name: List build files
+        run: |
+          echo "=== Listing build directory ==="
+          ls -la app/build/ || echo "Build directory not found"
+          if [ -d app/build ]; then
+            echo ""
+            echo "=== Looking for expected file ==="
+            find app/build -name "*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.tar.gz" || echo "No build files found"
+          fi
+        working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}
+        shell: bash
+
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v1
         with:
@@ -341,3 +353,4 @@ jobs:
           fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
