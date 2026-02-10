@@ -372,4 +372,5 @@ jobs:
             exit 1
           fi
 
-          gh release upload "release-v$VERSION" "$FILE_PATH" --clobber
+          cd "$GITHUB_WORKSPACE"
+          gh release upload "release-v$VERSION" "$FILE_PATH" --clobber --repo ${{ github.repository }}
