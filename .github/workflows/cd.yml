@@ -98,14 +98,25 @@ jobs:
 
           if echo "$RELEASES" | grep -q "\"tag_name\": \"$TAG_NAME\""; then
             echo "⚠️  Release for tag $TAG_NAME already exists"
-            echo "release_exists=true" >> $GITHUB_OUTPUT
+            RELEASE_ID=$(echo "$RELEASES" | jq -r ".[] | select(.tag_name==\"$TAG_NAME\") | .id")
 
-            UPLOAD_URL=$(echo "$RELEASES" | jq -r ".[] | select(.tag_name==\"$TAG_NAME\") | .upload_url")
-            echo "upload_url=$UPLOAD_URL" >> $GITHUB_OUTPUT
+            echo "release_exists=true" >> $GITHUB_OUTPUT
+            echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
           else
             echo "✅ Release does not exist, will create"
             echo "release_exists=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Delete existing release
+        if: steps.check_release.outputs.release_exists == 'true'
+        run: |
+          RELEASE_ID="${{ steps.check_release.outputs.release_id }}"
+          echo "Deleting existing release $RELEASE_ID..."
+          curl -X DELETE \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID"
+          echo "✅ Existing release deleted"
 
       - name: Generate Release Body
         id: generate_body
@@ -113,6 +124,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.value }}"
           CURRENT_HEAD=$(git rev-parse HEAD)
+          CURRENT_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
           echo "Generating release body for version $VERSION..."
           echo "Current commit: $CURRENT_HEAD"
@@ -121,12 +133,18 @@ jobs:
 
           if [ -n "$LAST_PRIVATE_TAG" ]; then
             echo "Found last private tag: $LAST_PRIVATE_TAG"
-            git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'- %s (%h)' | head -50 > /tmp/changelog.txt
-            git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'%h - %s (%an, %ar)' | head -200 > /tmp/full_changelog.txt
+            CHANGELOG=$(git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'- %s (%h)' | head -50)
+            FULL_CHANGELOG=$(git log $LAST_PRIVATE_TAG..HEAD --pretty=format:'%h - %s (%an, %ar)' | head -200)
           else
             echo "No previous private tag found"
-            git log --pretty=format:'- %s (%h)' -20 > /tmp/changelog.txt
+            CHANGELOG=$(git log --pretty=format:'- %s (%h)' -20)
+            FULL_CHANGELOG=$(git log --pretty=format:'%h - %s (%an, %ar)' -50)
           fi
+
+          echo "changelog=$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "full_changelog=$FULL_CHANGELOG" >> $GITHUB_OUTPUT
+          echo "current_head=$CURRENT_HEAD" >> $GITHUB_OUTPUT
+          echo "current_date=$CURRENT_DATE" >> $GITHUB_OUTPUT
 
       - name: Create Release
         id: create_release
@@ -138,13 +156,13 @@ jobs:
           body: |
             ## 📦 What's New in v${{ steps.version.outputs.value }}
 
-            $(cat /tmp/changelog.txt)
+            ${{ steps.generate_body.outputs.changelog }}
 
             ---
 
             **Full Changelog**
 
-            $(cat /tmp/full_changelog.txt)
+            ${{ steps.generate_body.outputs.full_changelog }}
 
             ---
 
@@ -152,9 +170,9 @@ jobs:
 
             - **Version:** v${{ steps.version.outputs.value }}
             - **Source:** Based on siyuan-note/siyuan v${{ steps.version.outputs.value }}
-            - **Commit:** ${{ steps.generate_body.outputs.CURRENT_HEAD }}
+            - **Commit:** ${{ steps.generate_body.outputs.current_head }}
             - **Repository:** EightDoor/siyuan
-            - **Build Date:** ${{ steps.generate_body.outputs.CURRENT_DATE }}
+            - **Build Date:** ${{ steps.generate_body.outputs.current_date }}
             - **Private Tag:** release-v${{ steps.version.outputs.value }}
           draft: false
           prerelease: true
@@ -163,11 +181,7 @@ jobs:
       - name: Set upload_url
         id: set_upload_url
         run: |
-          if [ "${{ steps.check_release.outputs.release_exists }}" == "true" ]; then
-            echo "upload_url=${{ steps.check_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
-          else
-            echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
-          fi
+          echo "upload_url=${{ steps.create_release.outputs.upload_url }}" >> $GITHUB_OUTPUT
 
   build:
     runs-on: ${{ matrix.config.os }}
