@@ -333,12 +333,11 @@ jobs:
         run: pnpm run ${{ matrix.config.electron_args }}
         working-directory: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app
 
-      - name: Upload Release
-        uses: actions/upload-release-asset@v1
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: release-v${{ needs.create_release.outputs.version }}
+          files: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/build/siyuan-${{ needs.create_release.outputs.version }}-${{ matrix.config.suffix }}
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_name: siyuan-${{ needs.create_release.outputs.release_version }}-${{ matrix.config.suffix }}
-          asset_path: ${{ github.workspace }}/go/src/github.com/${{ env.repo_owner }}/${{ env.repo_name }}/app/build/siyuan-${{ needs.create_release.outputs.version }}-${{ matrix.config.suffix }}
-          asset_content_type: application/octet-stream
