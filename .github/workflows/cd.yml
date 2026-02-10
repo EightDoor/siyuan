@@ -175,7 +175,7 @@ jobs:
             - **Build Date:** ${{ steps.generate_body.outputs.current_date }}
             - **Private Tag:** release-v${{ steps.version.outputs.value }}
           draft: false
-          prerelease: true
+          prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set upload_url
