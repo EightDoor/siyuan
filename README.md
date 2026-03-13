@@ -1,3 +1,6 @@
+# 更新的项目
+- [unlock-siyuan](https://github.com/EightDoor/unlock-siyuan)
+
 ### 修改项
 
 - 去除更新提示、去除用户相关内容，可以云端同步
